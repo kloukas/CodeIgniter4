@@ -1,19 +1,21 @@
 <?php
 namespace CodeIgniter\HTTP;
 
+use CodeIgniter\Config\Services;
 use CodeIgniter\HTTP\Exceptions\HTTPException;
+use Config\App;
 
-class URITest extends \CIUnitTestCase
+class URITest extends \CodeIgniter\Test\CIUnitTestCase
 {
 
-	protected function setUp()
+	protected function setUp(): void
 	{
 		parent::setUp();
 	}
 
 	//--------------------------------------------------------------------
 
-	public function tearDown()
+	public function tearDown(): void
 	{
 	}
 
@@ -779,6 +781,79 @@ class URITest extends \CIUnitTestCase
 
 		$uri = new URI($base);
 		$uri->setSegment(6, 'banana');
+	}
+
+	//--------------------------------------------------------------------
+	// Exploratory testing, investigating https://github.com/codeigniter4/CodeIgniter4/issues/2016
+
+	public function testBasedNoIndex()
+	{
+		Services::reset();
+
+		$_SERVER['HTTP_HOST']   = 'example.com';
+		$_SERVER['REQUEST_URI'] = '/ci/v4/controller/method';
+
+		$config            = new App();
+		$config->baseURL   = 'http://example.com/ci/v4';
+		$config->indexPage = 'index.php';
+		$request           = Services::request($config);
+		$request->uri      = new URI('http://example.com/ci/v4/controller/method');
+
+		Services::injectMock('request', $request);
+
+		// going through request
+		$this->assertEquals('http://example.com/ci/v4/controller/method', (string) $request->uri);
+		$this->assertEquals('/ci/v4/controller/method', $request->uri->getPath());
+
+		// standalone
+		$uri = new URI('http://example.com/ci/v4/controller/method');
+		$this->assertEquals('http://example.com/ci/v4/controller/method', (string) $uri);
+		$this->assertEquals('/ci/v4/controller/method', $uri->getPath());
+
+		$this->assertEquals($uri->getPath(), $request->uri->getPath());
+	}
+
+	public function testBasedWithIndex()
+	{
+		Services::reset();
+
+		$_SERVER['HTTP_HOST']   = 'example.com';
+		$_SERVER['REQUEST_URI'] = '/ci/v4/index.php/controller/method';
+
+		$config            = new App();
+		$config->baseURL   = 'http://example.com/ci/v4';
+		$config->indexPage = 'index.php';
+		$request           = Services::request($config);
+		$request->uri      = new URI('http://example.com/ci/v4/index.php/controller/method');
+
+		Services::injectMock('request', $request);
+
+		// going through request
+		$this->assertEquals('http://example.com/ci/v4/index.php/controller/method', (string) $request->uri);
+		$this->assertEquals('/ci/v4/index.php/controller/method', $request->uri->getPath());
+
+		// standalone
+		$uri = new URI('http://example.com/ci/v4/index.php/controller/method');
+		$this->assertEquals('http://example.com/ci/v4/index.php/controller/method', (string) $uri);
+		$this->assertEquals('/ci/v4/index.php/controller/method', $uri->getPath());
+
+		$this->assertEquals($uri->getPath(), $request->uri->getPath());
+	}
+
+	public function testZeroAsURIPath()
+	{
+		$url = 'http://example.com/0';
+		$uri = new URI($url);
+		$this->assertEquals($url, (string) $uri);
+		$this->assertEquals('/0', $uri->getPath());
+	}
+
+	public function testEmptyURIPath()
+	{
+		$url = 'http://example.com/';
+		$uri = new URI($url);
+		$this->assertEquals([], $uri->getSegments());
+		$this->assertEquals(0, $uri->getTotalSegments());
 	}
 
 }

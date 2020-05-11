@@ -1,15 +1,16 @@
 <?php namespace CodeIgniter\Database\Builder;
 
 use CodeIgniter\Database\BaseBuilder;
-use Tests\Support\Database\MockConnection;
+use CodeIgniter\Database\Exceptions\DataException;
+use CodeIgniter\Test\Mock\MockConnection;
 
-class SelectTest extends \CIUnitTestCase
+class SelectTest extends \CodeIgniter\Test\CIUnitTestCase
 {
 	protected $db;
 
 	//--------------------------------------------------------------------
 
-	protected function setUp()
+	protected function setUp(): void
 	{
 		parent::setUp();
 
@@ -198,12 +199,38 @@ class SelectTest extends \CIUnitTestCase
 
 	//--------------------------------------------------------------------
 
+	public function testSelectCountWithNoAlias()
+	{
+		$builder = new BaseBuilder('invoices', $this->db);
+
+		$builder->selectCount('payments');
+
+		$expected = 'SELECT COUNT("payments") AS "payments" FROM "invoices"';
+
+		$this->assertEquals($expected, str_replace("\n", ' ', $builder->getCompiledSelect()));
+	}
+
+	//--------------------------------------------------------------------
+
+	public function testSelectCountWithAlias()
+	{
+		$builder = new BaseBuilder('invoices', $this->db);
+
+		$builder->selectCount('payments', 'myAlias');
+
+		$expected = 'SELECT COUNT("payments") AS "myAlias" FROM "invoices"';
+
+		$this->assertEquals($expected, str_replace("\n", ' ', $builder->getCompiledSelect()));
+	}
+
+	//--------------------------------------------------------------------
+
 	public function testSelectMinThrowsExceptionOnEmptyValue()
 	{
 		$builder = new BaseBuilder('invoices', $this->db);
 
-		$this->expectException('\CodeIgniter\Database\Exceptions\DatabaseException');
-		$this->expectExceptionMessage('The query you submitted is not valid.');
+		$this->expectException(DataException::class);
+		$this->expectExceptionMessage('Empty statement is given for the field `Select`');
 
 		$builder->selectSum('');
 	}
@@ -222,4 +249,17 @@ class SelectTest extends \CIUnitTestCase
 	}
 
 	//--------------------------------------------------------------------
+
+	public function testSelectMinThrowsExceptionOnMultipleColumn()
+	{
+		$builder = new BaseBuilder('users', $this->db);
+
+		$this->expectException(DataException::class);
+		$this->expectExceptionMessage('You must provide a valid column name not separated by comma.');
+
+		$builder->selectSum('name,role');
+	}
+
+	//--------------------------------------------------------------------
+
 }

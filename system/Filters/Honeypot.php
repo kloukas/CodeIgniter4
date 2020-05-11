@@ -1,5 +1,4 @@
-<?php namespace CodeIgniter\Filters;
-
+<?php
 /**
  * CodeIgniter
  *
@@ -8,6 +7,7 @@
  * This content is released under the MIT License (MIT)
  *
  * Copyright (c) 2014-2019 British Columbia Institute of Technology
+ * Copyright (c) 2019-2020 CodeIgniter Foundation
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -29,19 +29,23 @@
  *
  * @package    CodeIgniter
  * @author     CodeIgniter Dev Team
- * @copyright  2014-2019 British Columbia Institute of Technology (https://bcit.ca/)
+ * @copyright  2019-2020 CodeIgniter Foundation
  * @license    https://opensource.org/licenses/MIT	MIT License
  * @link       https://codeigniter.com
- * @since      Version 3.0.0
+ * @since      Version 4.0.0
  * @filesource
  */
 
-use CodeIgniter\Filters\FilterInterface;
+namespace CodeIgniter\Filters;
+
+use CodeIgniter\Honeypot\Exceptions\HoneypotException;
 use CodeIgniter\HTTP\RequestInterface;
 use CodeIgniter\HTTP\ResponseInterface;
 use Config\Services;
-use CodeIgniter\Honeypot\Exceptions\HoneypotException;
 
+/**
+ * Honeypot filter
+ */
 class Honeypot implements FilterInterface
 {
 
@@ -49,9 +53,11 @@ class Honeypot implements FilterInterface
 	 * Checks if Honeypot field is empty; if not
 	 * then the requester is a bot
 	 *
-	 * @param CodeIgniter\HTTP\RequestInterface $request
+	 * @param \CodeIgniter\HTTP\RequestInterface $request
 	 *
-	 * @return mixed
+	 * @return void
+	 *
+	 * @throws \CodeIgniter\Honeypot\Exceptions\HoneypotException
 	 */
 	public function before(RequestInterface $request)
 	{
@@ -63,11 +69,12 @@ class Honeypot implements FilterInterface
 	}
 
 	/**
-	 * Attach a honypot to the current response.
+	 * Attach a honeypot to the current response.
 	 *
-	 * @param  CodeIgniter\HTTP\RequestInterface  $request
-	 * @param  CodeIgniter\HTTP\ResponseInterface $response
-	 * @return mixed
+	 * @param \CodeIgniter\HTTP\RequestInterface  $request
+	 * @param \CodeIgniter\HTTP\ResponseInterface $response
+	 *
+	 * @return void
 	 */
 	public function after(RequestInterface $request, ResponseInterface $response)
 	{

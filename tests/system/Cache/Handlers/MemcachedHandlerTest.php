@@ -1,6 +1,6 @@
 <?php namespace CodeIgniter\Cache\Handlers;
 
-class MemcachedHandlerTest extends \CIUnitTestCase
+class MemcachedHandlerTest extends \CodeIgniter\Test\CIUnitTestCase
 {
 	private $memcachedHandler;
 	private static $key1 = 'key1';
@@ -18,7 +18,7 @@ class MemcachedHandlerTest extends \CIUnitTestCase
 	private static $dummy = 'dymmy';
 	private $config;
 
-	protected function setUp()
+	protected function setUp(): void
 	{
 		parent::setUp();
 
@@ -33,7 +33,7 @@ class MemcachedHandlerTest extends \CIUnitTestCase
 		$this->memcachedHandler->initialize();
 	}
 
-	public function tearDown()
+	public function tearDown(): void
 	{
 		foreach (self::getKeyArray() as $key)
 		{
@@ -51,10 +51,10 @@ class MemcachedHandlerTest extends \CIUnitTestCase
 		$this->memcachedHandler->save(self::$key1, 'value', 1);
 
 		$this->assertSame('value', $this->memcachedHandler->get(self::$key1));
-		$this->assertFalse($this->memcachedHandler->get(self::$dummy));
+		$this->assertNull($this->memcachedHandler->get(self::$dummy));
 
 		\CodeIgniter\CLI\CLI::wait(2);
-		$this->assertFalse($this->memcachedHandler->get(self::$key1));
+		$this->assertNull($this->memcachedHandler->get(self::$key1));
 	}
 
 	public function testSave()
@@ -120,7 +120,7 @@ class MemcachedHandlerTest extends \CIUnitTestCase
 	{
 		$this->memcachedHandler->save(self::$key1, 'value');
 
-		$this->assertInternalType('array', $this->memcachedHandler->getCacheInfo());
+		$this->assertIsArray($this->memcachedHandler->getCacheInfo());
 	}
 
 	public function testGetMetaData()

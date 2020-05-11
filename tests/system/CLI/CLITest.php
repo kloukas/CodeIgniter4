@@ -2,12 +2,12 @@
 
 use CodeIgniter\Test\Filters\CITestStreamFilter;
 
-class CLITest extends \CIUnitTestCase
+class CLITest extends \CodeIgniter\Test\CIUnitTestCase
 {
 
 	private $stream_filter;
 
-	protected function setUp()
+	protected function setUp(): void
 	{
 		parent::setUp();
 
@@ -15,7 +15,7 @@ class CLITest extends \CIUnitTestCase
 		$this->stream_filter        = stream_filter_append(STDOUT, 'CITestStreamFilter');
 	}
 
-	public function tearDown()
+	public function tearDown(): void
 	{
 		stream_filter_remove($this->stream_filter);
 	}
@@ -76,21 +76,19 @@ class CLITest extends \CIUnitTestCase
 		CLI::newLine();
 	}
 
-	/**
-	 * @expectedException        RuntimeException
-	 * @expectedExceptionMessage Invalid foreground color: Foreground
-	 */
 	public function testColorExceptionForeground()
 	{
+		$this->expectException('RuntimeException');
+		$this->expectExceptionMessage('Invalid foreground color: Foreground');
+
 		CLI::color('test', 'Foreground');
 	}
 
-	/**
-	 * @expectedException        RuntimeException
-	 * @expectedExceptionMessage Invalid background color: Background
-	 */
 	public function testColorExceptionBackground()
 	{
+		$this->expectException('RuntimeException');
+		$this->expectExceptionMessage('Invalid background color: Background');
+
 		CLI::color('test', 'white', 'Background');
 	}
 
@@ -99,10 +97,35 @@ class CLITest extends \CIUnitTestCase
 		$this->assertEquals("\033[1;37m\033[42m\033[4mtest\033[0m", CLI::color('test', 'white', 'green', 'underline'));
 	}
 
+	public function testPrint()
+	{
+		CLI::print('test');
+		$expected = 'test';
+
+		$this->assertEquals($expected, CITestStreamFilter::$buffer);
+	}
+
+	public function testPrintForeground()
+	{
+		CLI::print('test', 'red');
+		$expected = "\033[0;31mtest\033[0m";
+
+		$this->assertEquals($expected, CITestStreamFilter::$buffer);
+	}
+
+	public function testPrintBackground()
+	{
+		CLI::print('test', 'red', 'green');
+		$expected = "\033[0;31m\033[42mtest\033[0m";
+
+		$this->assertEquals($expected, CITestStreamFilter::$buffer);
+	}
+
 	public function testWrite()
 	{
 		CLI::write('test');
 		$expected = <<<EOT
+
 test
 
 EOT;
@@ -344,7 +367,7 @@ EOT;
 				[],
 				"+---+-----+\n" .
 				"| 1 | bar |\n" .
-				"+---+-----+\n",
+				"+---+-----+\n\n",
 			],
 			[
 				$one_row,
@@ -353,7 +376,7 @@ EOT;
 				"| ID | Title |\n" .
 				"+----+-------+\n" .
 				"| 1  | bar   |\n" .
-				"+----+-------+\n",
+				"+----+-------+\n\n",
 			],
 			[
 				$many_rows,
@@ -362,7 +385,7 @@ EOT;
 				"| 1 | bar             |\n" .
 				"| 2 | bar * 2         |\n" .
 				"| 3 | bar + bar + bar |\n" .
-				"+---+-----------------+\n",
+				"+---+-----------------+\n\n",
 			],
 			[
 				$many_rows,
@@ -373,7 +396,7 @@ EOT;
 				"| 1  | bar             |\n" .
 				"| 2  | bar * 2         |\n" .
 				"| 3  | bar + bar + bar |\n" .
-				"+----+-----------------+\n",
+				"+----+-----------------+\n\n",
 			],
 		];
 	}
@@ -382,5 +405,6 @@ EOT;
 	{
 		$this->assertEquals(18, mb_strlen(CLI::color('success', 'green')));
 		$this->assertEquals(7, CLI::strlen(CLI::color('success', 'green')));
+		$this->assertEquals(0, CLI::strlen(null));
 	}
 }

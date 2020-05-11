@@ -3,19 +3,17 @@ namespace CodeIgniter\Config;
 
 use org\bovigo\vfs\vfsStream;
 
-//require_once 'system/Benchmark/Timer.php';
-
 /**
  * @backupGlobals enabled
  */
-class DotEnvTest extends \CIUnitTestCase
+class DotEnvTest extends \CodeIgniter\Test\CIUnitTestCase
 {
 
 	protected $fixturesFolder;
 
 	//--------------------------------------------------------------------
 
-	protected function setUp()
+	protected function setUp(): void
 	{
 		parent::setUp();
 
@@ -29,7 +27,7 @@ class DotEnvTest extends \CIUnitTestCase
 		chmod($path, 0644);
 	}
 
-	public function tearDown()
+	public function tearDown(): void
 	{
 		parent::tearDown();
 

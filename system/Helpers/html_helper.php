@@ -7,6 +7,7 @@
  * This content is released under the MIT License (MIT)
  *
  * Copyright (c) 2014-2019 British Columbia Institute of Technology
+ * Copyright (c) 2019-2020 CodeIgniter Foundation
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -28,23 +29,19 @@
  *
  * @package    CodeIgniter
  * @author     CodeIgniter Dev Team
- * @copyright  2014-2019 British Columbia Institute of Technology (https://bcit.ca/)
+ * @copyright  2019-2020 CodeIgniter Foundation
  * @license    https://opensource.org/licenses/MIT    MIT License
  * @link       https://codeigniter.com
- * @since      Version 3.0.0
+ * @since      Version 4.0.0
  * @filesource
  */
 
 // --------------------------------------------------------------------
 
 /**
- * CodeIgniter HTML Helper
+ * CodeIgniter HTML Helpers
  *
- * @package    CodeIgniter
- * @subpackage Helpers
- * @category   Helpers
- * @author     CodeIgniter Dev Team
- * @link       https://codeigniter.com/user_guide/helpers/html_helper.html
+ * @package CodeIgniter
  */
 if (! function_exists('ul'))
 {
@@ -54,11 +51,11 @@ if (! function_exists('ul'))
 	 * Generates an HTML unordered list from an single or
 	 * multi-dimensional array.
 	 *
-	 * @param  array  $list
-	 * @param  string $attributes HTML attributes
+	 * @param  array $list
+	 * @param  mixed $attributes HTML attributes string, array, object
 	 * @return string
 	 */
-	function ul(array $list, string $attributes = ''): string
+	function ul(array $list, $attributes = ''): string
 	{
 		return _list('ul', $list, $attributes);
 	}
@@ -73,11 +70,11 @@ if (! function_exists('ol'))
 	 *
 	 * Generates an HTML ordered list from an single or multi-dimensional array.
 	 *
-	 * @param  array  $list
-	 * @param  string $attributes HTML attributes
+	 * @param  array $list
+	 * @param  mixed $attributes HTML attributes string, array, object
 	 * @return string
 	 */
-	function ol(array $list, string $attributes = ''): string
+	function ol(array $list, $attributes = ''): string
 	{
 		return _list('ol', $list, $attributes);
 	}
@@ -94,11 +91,11 @@ if (! function_exists('_list'))
 	 *
 	 * @param  string  $type
 	 * @param  mixed   $list
-	 * @param  string  $attributes
+	 * @param  mixed   $attributes string, array, object
 	 * @param  integer $depth
 	 * @return string
 	 */
-	function _list(string $type = 'ul', $list = [], string $attributes = '', int $depth = 0): string
+	function _list(string $type = 'ul', $list = [], $attributes = '', int $depth = 0): string
 	{
 		// Set the indentation based on the depth
 		$out = str_repeat(' ', $depth)
@@ -335,8 +332,7 @@ if (! function_exists('video'))
 	 * contain one or more video sources
 	 *
 	 * @param  mixed   $src                Either a source string or an array of sources
-	 * @param  string  $unsupportedMessage The message to display
-	 *       if the media tag is not supported by the browser
+	 * @param  string  $unsupportedMessage The message to display if the media tag is not supported by the browser
 	 * @param  string  $attributes         HTML attributes
 	 * @param  array   $tracks
 	 * @param  boolean $indexPage
@@ -386,9 +382,7 @@ if (! function_exists('video'))
 					. "\n";
 		}
 
-		$video .= "</video>\n";
-
-		return $video;
+		return $video . "</video>\n";
 	}
 }
 
@@ -451,9 +445,7 @@ if (! function_exists('audio'))
 			$audio .= "\n" . _space_indent() . $unsupportedMessage . "\n";
 		}
 
-		$audio .= "</audio>\n";
-
-		return $audio;
+		return $audio . "</audio>\n";
 	}
 }
 
@@ -462,12 +454,11 @@ if (! function_exists('audio'))
 if (! function_exists('_media'))
 {
 	/**
-	 *
 	 * Generate media based tag
 	 *
 	 * @param string $name
 	 * @param array  $types
-	 * @param string $unsupportedMessage
+	 * @param string $unsupportedMessage The message to display if the media tag is not supported by the browser.
 	 * @param string $attributes
 	 * @param array  $tracks
 	 *
@@ -506,9 +497,7 @@ if (! function_exists('_media'))
 			$media .= _space_indent() . $unsupportedMessage . "\n";
 		}
 
-		$media .= '</' . $name . ">\n";
-
-		return $media;
+		return $media . ('</' . $name . ">\n");
 	}
 }
 
@@ -523,8 +512,7 @@ if (! function_exists('source'))
 	 * for either audio or video element
 	 *
 	 * @param  string  $src        The path of the media resource
-	 * @param  string  $type       The MIME-type of the resource with
-	 *  optional codecs parameters
+	 * @param  string  $type       The MIME-type of the resource with optional codecs parameters
 	 * @param  string  $attributes HTML attributes
 	 * @param  boolean $indexPage
 	 * @return string
@@ -551,9 +539,7 @@ if (! function_exists('source'))
 			$source .= ' ' . $attributes;
 		}
 
-		$source .= ' />';
-
-		return $source;
+		return $source . ' />';
 	}
 }
 
@@ -629,9 +615,7 @@ if (! function_exists('object'))
 			$object .= _space_indent() . $param . "\n";
 		}
 
-		$object .= "</object>\n";
-
-		return $object;
+		return $object . "</object>\n";
 	}
 }
 
@@ -700,9 +684,11 @@ if (! function_exists('embed'))
 if (! function_exists('_has_protocol'))
 {
 	/**
+	 * Test the protocol of a URI.
+	 *
 	 * @param string $url
 	 *
-	 * @return false|int
+	 * @return false|integer
 	 */
 	function _has_protocol(string $url)
 	{
@@ -715,11 +701,13 @@ if (! function_exists('_has_protocol'))
 if (! function_exists('_space_indent'))
 {
 	/**
-	 * @param int $depth
+	 * Provide space indenting.
+	 *
+	 * @param integer $depth
 	 *
 	 * @return string
 	 */
-	function _space_indent($depth = 2): string
+	function _space_indent(int $depth = 2): string
 	{
 		return str_repeat(' ', $depth);
 	}

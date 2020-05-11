@@ -1,4 +1,4 @@
-<?php namespace CodeIgniter\Images;
+<?php
 
 /**
  * CodeIgniter
@@ -8,6 +8,7 @@
  * This content is released under the MIT License (MIT)
  *
  * Copyright (c) 2014-2019 British Columbia Institute of Technology
+ * Copyright (c) 2019-2020 CodeIgniter Foundation
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -29,13 +30,18 @@
  *
  * @package    CodeIgniter
  * @author     CodeIgniter Dev Team
- * @copyright  2014-2019 British Columbia Institute of Technology (https://bcit.ca/)
+ * @copyright  2019-2020 CodeIgniter Foundation
  * @license    https://opensource.org/licenses/MIT    MIT License
  * @link       https://codeigniter.com
- * @since      Version 3.0.0
+ * @since      Version 4.0.0
  * @filesource
  */
 
+namespace CodeIgniter\Images;
+
+/**
+ * Expected behavior of an Image handler
+ */
 interface ImageHandlerInterface
 {
 
@@ -66,6 +72,18 @@ interface ImageHandlerInterface
 	 * @return mixed
 	 */
 	public function crop(int $width = null, int $height = null, int $x = null, int $y = null, bool $maintainRatio = false, string $masterDim = 'auto');
+
+	//--------------------------------------------------------------------
+
+	/**
+	 * Changes the stored image type to indicate the new file format to use when saving.
+	 * Does not touch the actual resource.
+	 *
+	 * @param integer|null $imageType A PHP imagetype constant, e.g. https://www.php.net/manual/en/function.image-type-to-mime-type.php
+	 *
+	 * @return $this
+	 */
+	public function convert(int $imageType);
 
 	//--------------------------------------------------------------------
 

@@ -1,5 +1,4 @@
-<?php namespace CodeIgniter\Debug\Toolbar\Collectors;
-
+<?php
 /**
  * CodeIgniter
  *
@@ -8,6 +7,7 @@
  * This content is released under the MIT License (MIT)
  *
  * Copyright (c) 2014-2019 British Columbia Institute of Technology
+ * Copyright (c) 2019-2020 CodeIgniter Foundation
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -29,14 +29,16 @@
  *
  * @package    CodeIgniter
  * @author     CodeIgniter Dev Team
- * @copyright  2014-2019 British Columbia Institute of Technology (https://bcit.ca/)
+ * @copyright  2019-2020 CodeIgniter Foundation
  * @license    https://opensource.org/licenses/MIT	MIT License
  * @link       https://codeigniter.com
  * @since      Version 4.0.0
  * @filesource
  */
 
-use CodeIgniter\Config\Services;
+namespace CodeIgniter\Debug\Toolbar\Collectors;
+
+use Config\Services;
 
 /**
  * Routes collector
@@ -74,11 +76,12 @@ class Routes extends BaseCollector
 	 * Returns the data of this collector to be formatted in the toolbar
 	 *
 	 * @return array
+	 * @throws \ReflectionException
 	 */
 	public function display(): array
 	{
 		$rawRoutes = Services::routes(true);
-		$router    = Services::router(null, true);
+		$router    = Services::router(null, null, true);
 
 		/*
 		 * Matched Route
@@ -86,7 +89,25 @@ class Routes extends BaseCollector
 		$route = $router->getMatchedRoute();
 
 		// Get our parameters
-		$method    = is_callable($router->controllerName()) ? new \ReflectionFunction($router->controllerName()) : new \ReflectionMethod($router->controllerName(), $router->methodName());
+		// Closure routes
+		if (is_callable($router->controllerName()))
+		{
+			$method = new \ReflectionFunction($router->controllerName());
+		}
+		else
+		{
+			try
+			{
+				$method = new \ReflectionMethod($router->controllerName(), $router->methodName());
+			}
+			catch (\ReflectionException $e)
+			{
+				// If we're here, the method doesn't exist
+				// and is likely calculated in _remap.
+				$method = new \ReflectionMethod($router->controllerName(), '_remap');
+			}
+		}
+
 		$rawParams = $method->getParameters();
 
 		$params = [];
@@ -95,7 +116,7 @@ class Routes extends BaseCollector
 			$params[] = [
 				'name'  => $param->getName(),
 				'value' => $router->params()[$key] ??
-				'&lt;empty&gt;&nbsp| default: ' . var_export($param->getDefaultValue(), true),
+					'&lt;empty&gt;&nbsp| default: ' . var_export($param->isDefaultValueAvailable() ? $param->getDefaultValue() : null, true),
 			];
 		}
 
@@ -111,17 +132,38 @@ class Routes extends BaseCollector
 		];
 
 		/*
-		 * Defined Routes
-		 */
-		$rawRoutes = $rawRoutes->getRoutes();
-		$routes    = [];
+		* Defined Routes
+		*/
+		$routes  = [];
+		$methods = [
+			'get',
+			'head',
+			'post',
+			'patch',
+			'put',
+			'delete',
+			'options',
+			'trace',
+			'connect',
+			'cli',
+		];
 
-		foreach ($rawRoutes as $from => $to)
+		foreach ($methods as $method)
 		{
-			$routes[] = [
-				'from' => $from,
-				'to'   => $to,
-			];
+			$raw = $rawRoutes->getRoutes($method);
+
+			foreach ($raw as $route => $handler)
+			{
+				// filter for strings, as callbacks aren't displayable
+				if (is_string($handler))
+				{
+					$routes[] = [
+						'method'  => strtoupper($method),
+						'route'   => $route,
+						'handler' => $handler,
+					];
+				}
+			}
 		}
 
 		return [
@@ -137,7 +179,7 @@ class Routes extends BaseCollector
 	 *
 	 * @return integer
 	 */
-	public function getBadgeValue()
+	public function getBadgeValue(): int
 	{
 		$rawRoutes = Services::routes(true);
 

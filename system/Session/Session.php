@@ -1,5 +1,4 @@
-<?php namespace CodeIgniter\Session;
-
+<?php
 /**
  * CodeIgniter
  *
@@ -8,6 +7,7 @@
  * This content is released under the MIT License (MIT)
  *
  * Copyright (c) 2014-2019 British Columbia Institute of Technology
+ * Copyright (c) 2019-2020 CodeIgniter Foundation
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -29,12 +29,14 @@
  *
  * @package    CodeIgniter
  * @author     CodeIgniter Dev Team
- * @copyright  2014-2019 British Columbia Institute of Technology (https://bcit.ca/)
+ * @copyright  2019-2020 CodeIgniter Foundation
  * @license    https://opensource.org/licenses/MIT	MIT License
  * @link       https://codeigniter.com
- * @since      Version 3.0.0
+ * @since      Version 4.0.0
  * @filesource
  */
+
+namespace CodeIgniter\Session;
 
 use Psr\Log\LoggerAwareTrait;
 
@@ -92,7 +94,7 @@ class Session implements SessionInterface
 	 *
 	 * @var string
 	 */
-	protected $sessionSavePath = null;
+	protected $sessionSavePath;
 
 	/**
 	 * Whether to match the user's IP address when reading the session data.
@@ -142,10 +144,16 @@ class Session implements SessionInterface
 	 * @var boolean
 	 */
 	protected $cookieSecure = false;
+
+	/**
+	 * sid regex expression
+	 *
+	 * @var string
+	 */
 	protected $sidRegexp;
 
 	/**
-	 * Logger instance to record error messages and awarnings.
+	 * Logger instance to record error messages and warnings.
 	 *
 	 * @var \PSR\Log\LoggerInterface
 	 */
@@ -184,14 +192,18 @@ class Session implements SessionInterface
 
 	/**
 	 * Initialize the session container and starts up the session.
+	 *
+	 * @return mixed
 	 */
 	public function start()
 	{
 		if (is_cli() && ENVIRONMENT !== 'testing')
 		{
+			// @codeCoverageIgnoreStart
 			$this->logger->debug('Session: Initialization under CLI aborted.');
 
 			return;
+			// @codeCoverageIgnoreEnd
 		}
 		elseif ((bool) ini_get('session.auto_start'))
 		{
@@ -295,7 +307,8 @@ class Session implements SessionInterface
 				$this->sessionExpiration, $this->cookiePath, $this->cookieDomain, $this->cookieSecure, true // HTTP only; Yes, this is intentional and not configurable for security reasons.
 		);
 
-		if (empty($this->sessionExpiration))
+		//if (empty($this->sessionExpiration))
+		if (! isset($this->sessionExpiration))
 		{
 			$this->sessionExpiration = (int) ini_get('session.gc_maxlifetime');
 		}
@@ -486,13 +499,13 @@ class Session implements SessionInterface
 	 */
 	public function get(string $key = null)
 	{
-		if (! empty($key) && $value = dot_array_search($key, $_SESSION))
+		if (! empty($key) && (! is_null($value = isset($_SESSION[$key]) ? $_SESSION[$key] : null) || ! is_null($value = dot_array_search($key, $_SESSION ?? []))))
 		{
 			return $value;
 		}
 		elseif (empty($_SESSION))
 		{
-			return [];
+			return $key === null ? [] : null;
 		}
 
 		if (! empty($key))
@@ -526,7 +539,7 @@ class Session implements SessionInterface
 	 *
 	 * @return boolean
 	 */
-	public function has(string $key)
+	public function has(string $key): bool
 	{
 		return isset($_SESSION[$key]);
 	}
@@ -581,10 +594,10 @@ class Session implements SessionInterface
 	 * Magic method to set variables in the session by simply calling
 	 *  $session->foo = bar;
 	 *
-	 * @param string $key Identifier of the session property to set.
-	 * @param $value
+	 * @param string       $key   Identifier of the session property to set.
+	 * @param string|array $value
 	 */
-	public function __set($key, $value)
+	public function __set(string $key, $value)
 	{
 		$_SESSION[$key] = $value;
 	}
@@ -599,7 +612,7 @@ class Session implements SessionInterface
 	 *
 	 * @return null|string
 	 */
-	public function __get($key)
+	public function __get(string $key)
 	{
 		// Note: Keep this order the same, just in case somebody wants to
 		//       use 'session_id' as a session data key, for whatever reason
@@ -613,6 +626,22 @@ class Session implements SessionInterface
 		}
 
 		return null;
+	}
+
+	//--------------------------------------------------------------------
+
+	/**
+	 * Magic method to check for session variables.
+	 * Different from has() in that it will validate 'session_id' as well.
+	 * Mostly used by internal PHP functions, users should stick to has()
+	 *
+	 * @param string $key Identifier of the session property to remove.
+	 *
+	 * @return boolean
+	 */
+	public function __isset(string $key): bool
+	{
+		return isset($_SESSION[$key]) || ($key === 'session_id');
 	}
 
 	//--------------------------------------------------------------------
@@ -674,9 +703,9 @@ class Session implements SessionInterface
 	/**
 	 * Keeps a single piece of flash data alive for one more request.
 	 *
-	 * @param string $key Property identifier or array of them
+	 * @param array|string $key Property identifier or array of them
 	 */
-	public function keepFlashdata(string $key)
+	public function keepFlashdata($key)
 	{
 		$this->markAsFlashdata($key);
 	}
@@ -690,7 +719,7 @@ class Session implements SessionInterface
 	 *
 	 * @return boolean False if any of the properties are not already set
 	 */
-	public function markAsFlashdata($key)
+	public function markAsFlashdata($key): bool
 	{
 		if (is_array($key))
 		{
@@ -756,7 +785,7 @@ class Session implements SessionInterface
 	 *
 	 * @return array	The property names of all flashdata
 	 */
-	public function getFlashKeys()
+	public function getFlashKeys(): array
 	{
 		if (! isset($_SESSION['__ci_vars']))
 		{
@@ -785,7 +814,7 @@ class Session implements SessionInterface
 	 * @param null         $value Value to store
 	 * @param integer      $ttl   Time-to-live in seconds
 	 */
-	public function setTempdata($data, $value = null, $ttl = 300)
+	public function setTempdata($data, $value = null, int $ttl = 300)
 	{
 		$this->set($data, $value);
 		$this->markAsTempdata($data, $ttl);
@@ -797,10 +826,10 @@ class Session implements SessionInterface
 	 * Returns either a single piece of tempdata, or all temp data currently
 	 * in the session.
 	 *
-	 * @param  $key   Session data key
-	 * @return mixed        Session data value or null if not found.
+	 * @param  string $key Session data key
+	 * @return mixed  Session data value or null if not found.
 	 */
-	public function getTempdata($key = null)
+	public function getTempdata(string $key = null)
 	{
 		if (isset($key))
 		{
@@ -828,7 +857,7 @@ class Session implements SessionInterface
 	 *
 	 * @param string $key Session data key
 	 */
-	public function removeTempdata($key)
+	public function removeTempdata(string $key)
 	{
 		$this->unmarkTempdata($key);
 		unset($_SESSION[$key]);
@@ -845,7 +874,7 @@ class Session implements SessionInterface
 	 *
 	 * @return boolean    False if any of the properties were not set
 	 */
-	public function markAsTempdata($key, $ttl = 300)
+	public function markAsTempdata($key, int $ttl = 300): bool
 	{
 		$ttl += time();
 
@@ -931,7 +960,7 @@ class Session implements SessionInterface
 	 *
 	 * @return array
 	 */
-	public function getTempKeys()
+	public function getTempKeys(): array
 	{
 		if (! isset($_SESSION['__ci_vars']))
 		{
@@ -972,7 +1001,9 @@ class Session implements SessionInterface
 			return;
 		}
 
+		// @codeCoverageIgnoreStart
 		session_start();
+		// @codeCoverageIgnoreEnd
 	}
 
 	//--------------------------------------------------------------------

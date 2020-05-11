@@ -5,10 +5,10 @@
  *
  * @package    CodeIgniter
  * @author     CodeIgniter Dev Team
- * @copyright  2014-2019 British Columbia Institute of Technology (https://bcit.ca/)
+ * @copyright  2019-2020 CodeIgniter Foundation
  * @license    https://opensource.org/licenses/MIT	MIT License
  * @link       https://codeigniter.com
- * @since      Version 3.0.0
+ * @since      Version 4.0.0
  * @filesource
  *
  * @codeCoverageIgnore
@@ -38,7 +38,7 @@ return [
    'cannotSetFilepath'          => 'When setting binary can not set filepath: {0}',
    'notFoundDownloadSource'     => 'Not found download body source.',
    'cannotSetCache'             => 'It does not supported caching for downloading.',
-   'cannotSetStatusCode'        => 'It does not supported chnage status code for downloading. code: {0}, reason: {1}',
+   'cannotSetStatusCode'        => 'It does not supported change status code for downloading. code: {0}, reason: {1}',
 
 	// Response
    'missingResponseStatus'      => 'HTTP Response is missing a status code',

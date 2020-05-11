@@ -1,10 +1,10 @@
 <?php
 namespace CodeIgniter\Helpers;
 
-final class InflectorHelperTest extends \CIUnitTestCase
+final class InflectorHelperTest extends \CodeIgniter\Test\CIUnitTestCase
 {
 
-	protected function setUp()
+	protected function setUp(): void
 	{
 		parent::setUp();
 
@@ -15,8 +15,7 @@ final class InflectorHelperTest extends \CIUnitTestCase
 
 	public function testSingular()
 	{
-		$strings =
-		[
+		$strings = [
 			'matrices'  => 'matrix',
 			'oxen'      => 'ox',
 			'aliases'   => 'alias',
@@ -56,8 +55,7 @@ final class InflectorHelperTest extends \CIUnitTestCase
 
 	public function testPlural()
 	{
-		$strings =
-		[
+		$strings = [
 			'searches'  => 'search',
 			'matrices'  => 'matrix',
 			'oxen'      => 'ox',
@@ -94,10 +92,32 @@ final class InflectorHelperTest extends \CIUnitTestCase
 
 	//--------------------------------------------------------------------
 
+	public function testCounted()
+	{
+		$triplets = [
+			[3, 'cat', '3 cats'],
+			[1, 'cat', '1 cat'],
+			[0, 'cat', '0 cats'],
+			[3, 'cats', '3 cats'],
+			[1, 'cats', '1 cat'],
+			[0, 'cats', '0 cats'],
+			[3, 'fish', '3 fish'],
+			[1, 'fish', '1 fish'],
+			[0, 'fish', '0 fish'],
+		];
+
+		foreach ($triplets as $triplet)
+		{
+			$result = counted($triplet[0], $triplet[1]);
+			$this->assertEquals($triplet[2], $result);
+		}
+	}
+
+	//--------------------------------------------------------------------
+
 	public function testCamelize()
 	{
-		$strings =
-		[
+		$strings = [
 			'hello from codeIgniter 4' => 'helloFromCodeIgniter4',
 			'hello_world'              => 'helloWorld',
 		];
@@ -111,10 +131,25 @@ final class InflectorHelperTest extends \CIUnitTestCase
 
 	//--------------------------------------------------------------------
 
+	public function testPascalize()
+	{
+		$strings = [
+			'hello from codeIgniter 4' => 'HelloFromCodeIgniter4',
+			'hello_world'              => 'HelloWorld',
+		];
+
+		foreach ($strings as $lowerCasedString => $pascalizedString)
+		{
+			$pascalized = pascalize($lowerCasedString);
+			$this->assertEquals($pascalized, $pascalizedString);
+		}
+	}
+
+	//--------------------------------------------------------------------
+
 	public function testUnderscore()
 	{
-		$strings =
-		[
+		$strings = [
 			'Hello From CodeIgniter 4' => 'Hello_From_CodeIgniter_4',
 			'hello world'              => 'hello_world',
 		];
@@ -150,8 +185,7 @@ final class InflectorHelperTest extends \CIUnitTestCase
 
 	public function testIsCountable()
 	{
-		$words =
-		[
+		$words = [
 			'tip'        => 'advice',
 			'fight'      => 'bravery',
 			'thing'      => 'equipment',
@@ -171,8 +205,7 @@ final class InflectorHelperTest extends \CIUnitTestCase
 
 	public function testDasherize()
 	{
-		$strings =
-		[
+		$strings = [
 			'hello_world'              => 'hello-world',
 			'Hello_From_CodeIgniter_4' => 'Hello-From-CodeIgniter-4',
 		];
@@ -188,8 +221,7 @@ final class InflectorHelperTest extends \CIUnitTestCase
 
 	public function testOrdinal()
 	{
-		$suffixes =
-		[
+		$suffixes = [
 			'st' => 1,
 			'nd' => 2,
 			'rd' => 3,
@@ -213,8 +245,7 @@ final class InflectorHelperTest extends \CIUnitTestCase
 
 	public function testOrdinalize()
 	{
-		$suffixedNumbers =
-		[
+		$suffixedNumbers = [
 			'1st'  => 1,
 			'2nd'  => 2,
 			'3rd'  => 3,

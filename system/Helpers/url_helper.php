@@ -7,6 +7,7 @@
  * This content is released under the MIT License (MIT)
  *
  * Copyright (c) 2014-2019 British Columbia Institute of Technology
+ * Copyright (c) 2019-2020 CodeIgniter Foundation
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -28,11 +29,17 @@
  *
  * @package    CodeIgniter
  * @author     CodeIgniter Dev Team
- * @copyright  2014-2019 British Columbia Institute of Technology (https://bcit.ca/)
+ * @copyright  2019-2020 CodeIgniter Foundation
  * @license    https://opensource.org/licenses/MIT    MIT License
  * @link       https://codeigniter.com
- * @since      Version 3.0.0
+ * @since      Version 4.0.0
  * @filesource
+ */
+
+/**
+ * CodeIgniter URL Helpers
+ *
+ * @package CodeIgniter
  */
 
 if (! function_exists('site_url'))
@@ -40,7 +47,7 @@ if (! function_exists('site_url'))
 	/**
 	 * Return a site URL to use in views
 	 *
-	 * @param mixed            $uri        URI string or array of URI segments
+	 * @param mixed            $uri       URI string or array of URI segments
 	 * @param string|null      $protocol
 	 * @param \Config\App|null $altConfig Alternate configuration to use
 	 *
@@ -88,8 +95,8 @@ if (! function_exists('base_url'))
 	/**
 	 * Return the base URL to use in views
 	 *
-	 * @param  mixed   $uri        URI string or array of URI segments
-	 * @param  string  $protocol
+	 * @param  mixed  $uri      URI string or array of URI segments
+	 * @param  string $protocol
 	 * @return string
 	 */
 	function base_url($uri = '', string $protocol = null): string
@@ -99,12 +106,20 @@ if (! function_exists('base_url'))
 		{
 			$uri = implode('/', $uri);
 		}
+		$uri = trim($uri, '/');
 
 		// We should be using the configured baseURL that the user set;
 		// otherwise get rid of the path, because we have
 		// no way of knowing the intent...
 		$config = \CodeIgniter\Config\Services::request()->config;
-		$url    = new \CodeIgniter\HTTP\URI($config->baseURL);
+
+		// If baseUrl does not have a trailing slash it won't resolve
+		// correctly for users hosting in a subfolder.
+		$baseUrl = ! empty($config->baseURL) && $config->baseURL !== '/'
+			? rtrim($config->baseURL, '/ ') . '/'
+			: $config->baseURL;
+
+		$url = new \CodeIgniter\HTTP\URI($baseUrl);
 		unset($config);
 
 		// Merge in the path set by the user, if any
@@ -125,7 +140,7 @@ if (! function_exists('base_url'))
 			$url->setScheme($protocol);
 		}
 
-		return (string) $url;
+		return rtrim((string) $url, '/ ');
 	}
 }
 
@@ -145,7 +160,25 @@ if (! function_exists('current_url'))
 	 */
 	function current_url(bool $returnObject = false)
 	{
-		return $returnObject ? \CodeIgniter\Config\Services::request()->uri : (string) \CodeIgniter\Config\Services::request()->uri;
+		$uri = clone service('request')->uri;
+
+		// If hosted in a sub-folder, we will have additional
+		// segments that show up prior to the URI path we just
+		// grabbed from the request, so add it on if necessary.
+		$baseUri = new \CodeIgniter\HTTP\URI(config('App')->baseURL);
+
+		if (! empty($baseUri->getPath()))
+		{
+			$path = rtrim($baseUri->getPath(), '/ ') . '/' . $uri->getPath();
+
+			$uri->setPath($path);
+		}
+
+		// Since we're basing off of the IncomingRequest URI,
+		// we are guaranteed to have a host based on our own configs.
+		return $returnObject
+			? $uri
+			: (string)$uri->setQuery('');
 	}
 }
 
@@ -390,9 +423,9 @@ if (! function_exists('safe_mailto'))
 			}
 			else
 			{
-				for ($i = 0, $l = strlen($attributes); $i < $l; $i ++)
+				for ($i = 0, $l = mb_strlen($attributes); $i < $l; $i ++)
 				{
-					$x[] = $attributes[$i];
+					$x[] = mb_substr($attributes, $i, 1);
 				}
 			}
 		}
@@ -442,13 +475,11 @@ if (! function_exists('safe_mailto'))
 			$output .= 'l[' . $i . "] = '" . $x[$i] . "';";
 		}
 
-		$output .= 'for (var i = l.length-1; i >= 0; i=i-1) {'
+		return $output . ('for (var i = l.length-1; i >= 0; i=i-1) {'
 				. "if (l[i].substring(0, 1) === '|') document.write(\"&#\"+unescape(l[i].substring(1))+\";\");"
 				. 'else document.write(unescape(l[i]));'
 				. '}'
-				. '</script>';
-
-		return $output;
+				. '</script>');
 	}
 }
 
@@ -519,7 +550,7 @@ if (! function_exists('prep_url'))
 	 * Formerly used URI, but that does not play nicely with URIs missing
 	 * the scheme.
 	 *
-	 * @param  string    the URL
+	 * @param  string $str the URL
 	 * @return string
 	 */
 	function prep_url(string $str = ''): string
@@ -570,13 +601,12 @@ if (! function_exists('url_title'))
 		$str = strip_tags($str);
 		foreach ($trans as $key => $val)
 		{
-			//			$str = preg_replace('#'.$key.'#i'.( UTF8_ENABLED ? 'u' : ''), $val, $str);
 			$str = preg_replace('#' . $key . '#iu', $val, $str);
 		}
 
 		if ($lowercase === true)
 		{
-			$str = strtolower($str);
+			$str = mb_strtolower($str);
 		}
 
 		return trim(trim($str, $separator));

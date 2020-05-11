@@ -1,5 +1,5 @@
 <?php
-namespace CodeIgniter\HTTP;
+
 
 /**
  * CodeIgniter
@@ -9,6 +9,7 @@ namespace CodeIgniter\HTTP;
  * This content is released under the MIT License (MIT)
  *
  * Copyright (c) 2014-2019 British Columbia Institute of Technology
+ * Copyright (c) 2019-2020 CodeIgniter Foundation
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -30,17 +31,19 @@ namespace CodeIgniter\HTTP;
  *
  * @package    CodeIgniter
  * @author     CodeIgniter Dev Team
- * @copyright  2014-2019 British Columbia Institute of Technology (https://bcit.ca/)
+ * @copyright  2019-2020 CodeIgniter Foundation
  * @license    https://opensource.org/licenses/MIT	MIT License
  * @link       https://codeigniter.com
- * @since      Version 3.0.0
+ * @since      Version 4.0.0
  * @filesource
  */
 
-use Config\App;
-use Config\Format;
+namespace CodeIgniter\HTTP;
+
 use CodeIgniter\HTTP\Exceptions\HTTPException;
 use CodeIgniter\Pager\PagerInterface;
+use Config\App;
+use Config\Format;
 
 /**
  * Representation of an outgoing, getServer-side response.
@@ -236,13 +239,10 @@ class Response extends Message implements ResponseInterface
 		// Also ensures that a Cache-control header exists.
 		$this->noCache();
 
-		// Are we enforcing a Content Security Policy?
-		if ($config->CSPEnabled === true)
-		{
-			$this->CSP        = new ContentSecurityPolicy(new \Config\ContentSecurityPolicy());
-			$this->CSPEnabled = true;
-		}
+		// We need CSP object even if not enabled to avoid calls to non existing methods
+		$this->CSP = new ContentSecurityPolicy(new \Config\ContentSecurityPolicy());
 
+		$this->CSPEnabled     = $config->CSPEnabled;
 		$this->cookiePrefix   = $config->cookiePrefix;
 		$this->cookieDomain   = $config->cookieDomain;
 		$this->cookiePath     = $config->cookiePath;
@@ -445,9 +445,9 @@ class Response extends Message implements ResponseInterface
 	 *
 	 * @return $this
 	 */
-	public function setJSON($body)
+	public function setJSON($body, bool $unencoded = false)
 	{
-		$this->body = $this->formatBody($body, 'json');
+		$this->body = $this->formatBody($body, 'json' . ($unencoded ? '-unencoded' : ''));
 
 		return $this;
 	}
@@ -535,12 +535,12 @@ class Response extends Message implements ResponseInterface
 	 */
 	protected function formatBody($body, string $format)
 	{
-		$mime = "application/{$format}";
+		$this->bodyFormat = ($format === 'json-unencoded' ? 'json' : $format);
+		$mime             = "application/{$this->bodyFormat}";
 		$this->setContentType($mime);
-		$this->bodyFormat = $format;
 
 		// Nothing much to do for a string...
-		if (! is_string($body))
+		if (! is_string($body) || $format === 'json-unencoded')
 		{
 			/**
 			 * @var Format $config
@@ -687,8 +687,8 @@ class Response extends Message implements ResponseInterface
 		}
 
 		$this->sendHeaders();
-		$this->sendBody();
 		$this->sendCookies();
+		$this->sendBody();
 
 		return $this;
 	}
@@ -710,18 +710,18 @@ class Response extends Message implements ResponseInterface
 
 		// Per spec, MUST be sent with each request, if possible.
 		// http://www.w3.org/Protocols/rfc2616/rfc2616-sec13.html
-		if (! isset($this->headers['Date']))
+		if (! isset($this->headers['Date']) && php_sapi_name() !== 'cli-server')
 		{
-			$this->setDate(\DateTime::createFromFormat('U', time()));
+			$this->setDate(\DateTime::createFromFormat('U', (string) time()));
 		}
 
 		// HTTP Status
-		header(sprintf('HTTP/%s %s %s', $this->protocolVersion, $this->statusCode, $this->reason), true, $this->statusCode);
+		header(sprintf('HTTP/%s %s %s', $this->getProtocolVersion(), $this->statusCode, $this->reason), true, $this->statusCode);
 
 		// Send all of our headers
 		foreach ($this->getHeaders() as $name => $values)
 		{
-			header($name . ': ' . $this->getHeaderLine($name), false, $this->statusCode);
+			header($name . ': ' . $this->getHeaderLine($name), true, $this->statusCode);
 		}
 
 		return $this;
@@ -807,7 +807,7 @@ class Response extends Message implements ResponseInterface
 	/**
 	 * Set a cookie
 	 *
-	 * Accepts an arbitrary number of binds (up to 7) or an associateive
+	 * Accepts an arbitrary number of binds (up to 7) or an associative
 	 * array in the first parameter containing all the values.
 	 *
 	 * @param string|array  $name     Cookie name or array containing binds
@@ -902,7 +902,7 @@ class Response extends Message implements ResponseInterface
 	 *
 	 * @return boolean
 	 */
-	public function hasCookie(string $name, $value = null, string $prefix = '')
+	public function hasCookie(string $name, string $value = null, string $prefix = ''): bool
 	{
 		if ($prefix === '' && $this->cookiePrefix !== '')
 		{
@@ -965,14 +965,14 @@ class Response extends Message implements ResponseInterface
 	/**
 	 * Sets a cookie to be deleted when the response is sent.
 	 *
-	 * @param $name
+	 * @param string $name
 	 * @param string $domain
 	 * @param string $path
 	 * @param string $prefix
 	 *
 	 * @return $this
 	 */
-	public function deleteCookie($name = '', string $domain = '', string $path = '/', string $prefix = '')
+	public function deleteCookie(string $name = '', string $domain = '', string $path = '/', string $prefix = '')
 	{
 		if (empty($name))
 		{
@@ -986,6 +986,7 @@ class Response extends Message implements ResponseInterface
 
 		$name = $prefix . $name;
 
+		$cookieHasFlag = false;
 		foreach ($this->cookies as &$cookie)
 		{
 			if ($cookie['name'] === $name)
@@ -1000,12 +1001,27 @@ class Response extends Message implements ResponseInterface
 				}
 				$cookie['value']   = '';
 				$cookie['expires'] = '';
-
+				$cookieHasFlag     = true;
 				break;
 			}
 		}
 
+		if (! $cookieHasFlag)
+		{
+			$this->setCookie($name, '', '', $domain, $path, $prefix);
+		}
+
 		return $this;
+	}
+
+	/**
+	 * Returns all cookies currently set.
+	 *
+	 * @return array
+	 */
+	public function getCookies()
+	{
+		return $this->cookies;
 	}
 
 	/**
@@ -1033,9 +1049,9 @@ class Response extends Message implements ResponseInterface
 	 * Generates the headers that force a download to happen. And
 	 * sends the file to the browser.
 	 *
-	 * @param string  $filename The path to the file to send
-	 * @param string  $data     The data to be downloaded
-	 * @param boolean $setMime  Whether to try and send the actual MIME type
+	 * @param string      $filename The path to the file to send
+	 * @param string|null $data     The data to be downloaded
+	 * @param boolean     $setMime  Whether to try and send the actual MIME type
 	 *
 	 * @return \CodeIgniter\HTTP\DownloadResponse|null
 	 */

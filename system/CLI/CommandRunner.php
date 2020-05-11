@@ -1,5 +1,5 @@
 <?php
-namespace CodeIgniter\CLI;
+
 
 /**
  * CodeIgniter
@@ -9,6 +9,7 @@ namespace CodeIgniter\CLI;
  * This content is released under the MIT License (MIT)
  *
  * Copyright (c) 2014-2019 British Columbia Institute of Technology
+ * Copyright (c) 2019-2020 CodeIgniter Foundation
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -30,16 +31,21 @@ namespace CodeIgniter\CLI;
  *
  * @package    CodeIgniter
  * @author     CodeIgniter Dev Team
- * @copyright  2014-2019 British Columbia Institute of Technology (https://bcit.ca/)
+ * @copyright  2019-2020 CodeIgniter Foundation
  * @license    https://opensource.org/licenses/MIT	MIT License
  * @link       https://codeigniter.com
- * @since      Version 3.0.0
+ * @since      Version 4.0.0
  * @filesource
  */
 
-use CodeIgniter\Config\Services;
-use CodeIgniter\Controller;
+namespace CodeIgniter\CLI;
 
+use CodeIgniter\Controller;
+use Config\Services;
+
+/**
+ * Command runner
+ */
 class CommandRunner extends Controller
 {
 
@@ -51,6 +57,8 @@ class CommandRunner extends Controller
 	protected $commands = [];
 
 	/**
+	 * Message logger.
+	 *
 	 * @var \CodeIgniter\Log\Logger
 	 */
 	protected $logger;
@@ -63,6 +71,9 @@ class CommandRunner extends Controller
 	 *
 	 * @param string $method
 	 * @param array  ...$params
+	 *
+	 * @return mixed
+	 * @throws \ReflectionException
 	 */
 	public function _remap($method, ...$params)
 	{
@@ -72,15 +83,18 @@ class CommandRunner extends Controller
 			array_shift($params);
 		}
 
-		$this->index($params);
+		return $this->index($params);
 	}
 
 	//--------------------------------------------------------------------
 
 	/**
+	 * Default command.
+	 *
 	 * @param array $params
 	 *
 	 * @return mixed
+	 * @throws \ReflectionException
 	 */
 	public function index(array $params)
 	{
@@ -90,7 +104,7 @@ class CommandRunner extends Controller
 
 		if (is_null($command))
 		{
-			$command = 'help';
+			$command = 'list';
 		}
 
 		return $this->runCommand($command, $params);
@@ -128,6 +142,8 @@ class CommandRunner extends Controller
 	/**
 	 * Scans all Commands directories and prepares a list
 	 * of each command with it's group and file.
+	 *
+	 * @throws \ReflectionException
 	 */
 	protected function createCommandList()
 	{
@@ -187,7 +203,7 @@ class CommandRunner extends Controller
 	 *
 	 * @return array
 	 */
-	public function getCommands()
+	public function getCommands(): array
 	{
 		return $this->commands;
 	}

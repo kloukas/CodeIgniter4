@@ -9,27 +9,34 @@ class Migration_Create_test_tables extends \CodeIgniter\Database\Migration
 
 		// User Table
 		$this->forge->addField([
-			'id'      => [
+			'id'         => [
 				'type'          => 'INTEGER',
 				'constraint'    => 3,
 				$unique_or_auto => true,
 			],
-			'name'    => [
+			'name'       => [
 				'type'       => 'VARCHAR',
 				'constraint' => 80,
 			],
-			'email'   => [
+			'email'      => [
 				'type'       => 'VARCHAR',
 				'constraint' => 100,
 			],
-			'country' => [
+			'country'    => [
 				'type'       => 'VARCHAR',
 				'constraint' => 40,
 			],
-			'deleted' => [
-				'type'       => 'TINYINT',
-				'constraint' => 1,
-				'default'    => '0',
+			'created_at' => [
+				'type' => 'DATETIME',
+				'null' => true,
+			],
+			'updated_at' => [
+				'type' => 'DATETIME',
+				'null' => true,
+			],
+			'deleted_at' => [
+				'type' => 'DATETIME',
+				'null' => true,
 			],
 		]);
 		$this->forge->addKey('id', true);
@@ -46,10 +53,24 @@ class Migration_Create_test_tables extends \CodeIgniter\Database\Migration
 				'type'       => 'VARCHAR',
 				'constraint' => 40,
 			],
-			'description' => ['type' => 'TEXT'],
-			'created_at'  => [
-				'type' => 'DATETIME',
+			'description' => [
+				'type' => 'TEXT',
 				'null' => true,
+			],
+			'created_at'  => [
+				'type'       => 'INTEGER',
+				'constraint' => 11,
+				'null'       => true,
+			],
+			'updated_at'  => [
+				'type'       => 'INTEGER',
+				'constraint' => 11,
+				'null'       => true,
+			],
+			'deleted_at'  => [
+				'type'       => 'INTEGER',
+				'constraint' => 11,
+				'null'       => true,
 			],
 		]);
 		$this->forge->addKey('id', true);
@@ -73,14 +94,22 @@ class Migration_Create_test_tables extends \CodeIgniter\Database\Migration
 
 		// Empty Table
 		$this->forge->addField([
-			'id'   => [
+			'id'         => [
 				'type'          => 'INTEGER',
 				'constraint'    => 3,
 				$unique_or_auto => true,
 			],
-			'name' => [
+			'name'       => [
 				'type'       => 'VARCHAR',
 				'constraint' => 40,
+			],
+			'created_at' => [
+				'type' => 'DATE',
+				'null' => true,
+			],
+			'updated_at' => [
+				'type' => 'DATE',
+				'null' => true,
 			],
 		]);
 		$this->forge->addKey('id', true);
@@ -101,17 +130,29 @@ class Migration_Create_test_tables extends \CodeIgniter\Database\Migration
 		]);
 		$this->forge->addKey('id', true);
 		$this->forge->createTable('secondary', true);
+
+		// Stringify Primary key Table
+		$this->forge->addField([
+			'id'    => [
+				'type'       => 'VARCHAR',
+				'constraint' => 3,
+			],
+			'value' => ['type' => 'TEXT'],
+		]);
+		$this->forge->addKey('id', true);
+		$this->forge->createTable('stringifypkey', true);
 	}
 
 	//--------------------------------------------------------------------
 
 	public function down()
 	{
-		$this->forge->dropTable('user');
-		$this->forge->dropTable('job');
-		$this->forge->dropTable('misc');
-		$this->forge->dropTable('empty');
-		$this->forge->dropTable('secondary');
+		$this->forge->dropTable('user', true);
+		$this->forge->dropTable('job', true);
+		$this->forge->dropTable('misc', true);
+		$this->forge->dropTable('empty', true);
+		$this->forge->dropTable('secondary', true);
+		$this->forge->dropTable('stringifypkey', true);
 	}
 
 	//--------------------------------------------------------------------

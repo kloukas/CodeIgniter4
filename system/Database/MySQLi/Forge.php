@@ -1,4 +1,4 @@
-<?php namespace CodeIgniter\Database\MySQLi;
+<?php
 
 /**
  * CodeIgniter
@@ -8,6 +8,7 @@
  * This content is released under the MIT License (MIT)
  *
  * Copyright (c) 2014-2019 British Columbia Institute of Technology
+ * Copyright (c) 2019-2020 CodeIgniter Foundation
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -29,12 +30,14 @@
  *
  * @package    CodeIgniter
  * @author     CodeIgniter Dev Team
- * @copyright  2014-2019 British Columbia Institute of Technology (https://bcit.ca/)
+ * @copyright  2019-2020 CodeIgniter Foundation
  * @license    https://opensource.org/licenses/MIT	MIT License
  * @link       https://codeigniter.com
- * @since      Version 3.0.0
+ * @since      Version 4.0.0
  * @filesource
  */
+
+namespace CodeIgniter\Database\MySQLi;
 
 /**
  * Forge for MySQLi
@@ -48,6 +51,13 @@ class Forge extends \CodeIgniter\Database\Forge
 	 * @var string
 	 */
 	protected $createDatabaseStr = 'CREATE DATABASE %s CHARACTER SET %s COLLATE %s';
+
+	/**
+	 * CREATE DATABASE IF statement
+	 *
+	 * @var string
+	 */
+	protected $createDatabaseIfStr = 'CREATE DATABASE IF NOT EXISTS %s CHARACTER SET %s COLLATE %s';
 
 	/**
 	 * DROP CONSTRAINT statement
@@ -116,7 +126,7 @@ class Forge extends \CodeIgniter\Database\Forge
 	 * @param  array $attributes Associative array of table attributes
 	 * @return string
 	 */
-	protected function _createTableAttributes($attributes)
+	protected function _createTableAttributes(array $attributes): string
 	{
 		$sql = '';
 
@@ -160,7 +170,7 @@ class Forge extends \CodeIgniter\Database\Forge
 	 * @param  mixed  $field      Column definition
 	 * @return string|string[]
 	 */
-	protected function _alterTable($alter_type, $table, $field)
+	protected function _alterTable(string $alter_type, string $table, $field)
 	{
 		if ($alter_type === 'DROP')
 		{
@@ -200,7 +210,7 @@ class Forge extends \CodeIgniter\Database\Forge
 	 * @param  array $field
 	 * @return string
 	 */
-	protected function _processColumn($field)
+	protected function _processColumn(array $field): string
 	{
 		$extra_clause = isset($field['after']) ? ' AFTER ' . $this->db->escapeIdentifiers($field['after']) : '';
 
@@ -229,7 +239,7 @@ class Forge extends \CodeIgniter\Database\Forge
 	 * @param  string $table (ignored)
 	 * @return string
 	 */
-	protected function _processIndexes($table)
+	protected function _processIndexes(string $table): string
 	{
 		$sql = '';
 
@@ -257,7 +267,7 @@ class Forge extends \CodeIgniter\Database\Forge
 			$unique = in_array($i, $this->uniqueKeys) ? 'UNIQUE ' : '';
 
 			$sql .= ",\n\t{$unique}KEY " . $this->db->escapeIdentifiers(implode('_', $this->keys[$i]))
-					. ' (' . implode(', ', $this->db->escapeIdentifiers($this->keys[$i])) . ')';
+				. ' (' . implode(', ', $this->db->escapeIdentifiers($this->keys[$i])) . ')';
 		}
 
 		$this->keys = [];

@@ -1,5 +1,4 @@
-<?php namespace CodeIgniter\Session\Handlers;
-
+<?php
 /**
  * CodeIgniter
  *
@@ -8,6 +7,7 @@
  * This content is released under the MIT License (MIT)
  *
  * Copyright (c) 2014-2019 British Columbia Institute of Technology
+ * Copyright (c) 2019-2020 CodeIgniter Foundation
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -29,12 +29,14 @@
  *
  * @package    CodeIgniter
  * @author     CodeIgniter Dev Team
- * @copyright  2014-2019 British Columbia Institute of Technology (https://bcit.ca/)
+ * @copyright  2019-2020 CodeIgniter Foundation
  * @license    https://opensource.org/licenses/MIT	MIT License
  * @link       https://codeigniter.com
- * @since      Version 3.0.0
+ * @since      Version 4.0.0
  * @filesource
  */
+
+namespace CodeIgniter\Session\Handlers;
 
 use CodeIgniter\Config\BaseConfig;
 use CodeIgniter\Session\Exceptions\SessionException;
@@ -79,6 +81,7 @@ class MemcachedHandler extends BaseHandler implements \SessionHandlerInterface
 	 * Constructor
 	 *
 	 * @param  BaseConfig $config
+	 * @param  string     $ipAddress
 	 * @throws \CodeIgniter\Session\Exceptions\SessionException
 	 */
 	public function __construct(BaseConfig $config, string $ipAddress)
@@ -115,7 +118,7 @@ class MemcachedHandler extends BaseHandler implements \SessionHandlerInterface
 	 *
 	 * @return boolean
 	 */
-	public function open($save_path, $name)
+	public function open($save_path, $name): bool
 	{
 		$this->memcached = new \Memcached();
 		$this->memcached->setOption(\Memcached::OPT_BINARY_PROTOCOL, true); // required for touch() usage
@@ -176,12 +179,15 @@ class MemcachedHandler extends BaseHandler implements \SessionHandlerInterface
 	 *
 	 * @return string    Serialized session data
 	 */
-	public function read($sessionID)
+	public function read($sessionID): string
 	{
 		if (isset($this->memcached) && $this->lockSession($sessionID))
 		{
 			// Needed by write() to detect session_regenerate_id() calls
-			$this->sessionID = $sessionID;
+			if (is_null($this->sessionID))
+			{
+				$this->sessionID = $sessionID;
+			}
 
 			$session_data      = (string) $this->memcached->get($this->keyPrefix . $sessionID);
 			$this->fingerprint = md5($session_data);
@@ -204,7 +210,7 @@ class MemcachedHandler extends BaseHandler implements \SessionHandlerInterface
 	 *
 	 * @return boolean
 	 */
-	public function write($sessionID, $sessionData)
+	public function write($sessionID, $sessionData): bool
 	{
 		if (! isset($this->memcached))
 		{
@@ -253,7 +259,7 @@ class MemcachedHandler extends BaseHandler implements \SessionHandlerInterface
 	 *
 	 * @return boolean
 	 */
-	public function close()
+	public function close(): bool
 	{
 		if (isset($this->memcached))
 		{
@@ -283,7 +289,7 @@ class MemcachedHandler extends BaseHandler implements \SessionHandlerInterface
 	 *
 	 * @return boolean
 	 */
-	public function destroy($session_id)
+	public function destroy($session_id): bool
 	{
 		if (isset($this->memcached, $this->lockKey))
 		{
@@ -306,7 +312,7 @@ class MemcachedHandler extends BaseHandler implements \SessionHandlerInterface
 	 *
 	 * @return boolean
 	 */
-	public function gc($maxlifetime)
+	public function gc($maxlifetime): bool
 	{
 		// Not necessary, Memcached takes care of that.
 		return true;

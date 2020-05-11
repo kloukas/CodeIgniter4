@@ -1,4 +1,5 @@
-<?php namespace CodeIgniter\Test;
+<?php
+
 
 /**
  * CodeIgniter
@@ -8,6 +9,7 @@
  * This content is released under the MIT License (MIT)
  *
  * Copyright (c) 2014-2019 British Columbia Institute of Technology
+ * Copyright (c) 2019-2020 CodeIgniter Foundation
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -29,18 +31,23 @@
  *
  * @package    CodeIgniter
  * @author     CodeIgniter Dev Team
- * @copyright  2014-2019 British Columbia Institute of Technology (https://bcit.ca/)
+ * @copyright  2019-2020 CodeIgniter Foundation
  * @license    https://opensource.org/licenses/MIT	MIT License
  * @link       https://codeigniter.com
- * @since      Version 3.0.0
+ * @since      Version 4.0.0
  * @filesource
  */
 
+namespace CodeIgniter\Test;
+
 use CodeIgniter\HTTP\IncomingRequest;
-use CodeIgniter\HTTP\UserAgent;
 use CodeIgniter\HTTP\Response;
 use CodeIgniter\HTTP\URI;
+use CodeIgniter\HTTP\UserAgent;
 use Config\App;
+use Config\Services;
+use InvalidArgumentException;
+use Throwable;
 
 /**
  * ControllerTester Trait
@@ -58,16 +65,49 @@ use Config\App;
  */
 trait ControllerTester
 {
+
+	/**
+	 * Controller configuration.
+	 *
+	 * @var BaseConfig
+	 */
 	protected $appConfig;
 
+	/**
+	 * Request.
+	 *
+	 * @var Request
+	 */
 	protected $request;
-
+	/**
+	 * Response.
+	 *
+	 * @var Response
+	 */
 	protected $response;
-
+	/**
+	 * Message logger.
+	 *
+	 * @var LoggerInterface
+	 */
+	protected $logger;
+	/**
+	 * Initialized controller.
+	 *
+	 * @var Controller
+	 */
 	protected $controller;
-
+	/**
+	 * URI of this request.
+	 *
+	 * @var string
+	 */
 	protected $uri = 'http://example.com';
-
+	/**
+	 * Request or response body.
+	 *
+	 * @var string
+	 */
 	protected $body;
 
 	/**
@@ -81,12 +121,17 @@ trait ControllerTester
 	{
 		if (! class_exists($name))
 		{
-			throw new \InvalidArgumentException('Invalid Controller: ' . $name);
+			throw new InvalidArgumentException('Invalid Controller: ' . $name);
 		}
 
 		if (empty($this->appConfig))
 		{
 			$this->appConfig = new App();
+		}
+
+		if (! $this->uri instanceof URI)
+		{
+			$this->uri = new URI($this->appConfig->baseURL ?? 'http://example.com');
 		}
 
 		if (empty($this->request))
@@ -99,7 +144,13 @@ trait ControllerTester
 			$this->response = new Response($this->appConfig);
 		}
 
-		$this->controller = new $name($this->request, $this->response);
+		if (empty($this->logger))
+		{
+			$this->logger = Services::logger();
+		}
+
+		$this->controller = new $name();
+		$this->controller->initController($this->request, $this->response, $this->logger);
 
 		return $this;
 	}
@@ -116,7 +167,7 @@ trait ControllerTester
 	{
 		if (! method_exists($this->controller, $method) || ! is_callable([$this->controller, $method]))
 		{
-			throw new \InvalidArgumentException('Method does not exist or is not callable in controller: ' . $method);
+			throw new InvalidArgumentException('Method does not exist or is not callable in controller: ' . $method);
 		}
 
 		// The URL helper is always loaded by the system
@@ -124,33 +175,46 @@ trait ControllerTester
 		helper('url');
 
 		$result = (new ControllerResponse())
-			->setRequest($this->request)
-			->setResponse($this->response);
+				->setRequest($this->request)
+				->setResponse($this->response);
 
+		$response = null;
 		try
 		{
 			ob_start();
 
 			$response = $this->controller->{$method}(...$params);
 		}
-		catch (\Throwable $e)
+		catch (Throwable $e)
 		{
 			$result->response()
-				   ->setStatusCode($e->getCode());
+					->setStatusCode($e->getCode());
 		}
 		finally
 		{
 			$output = ob_get_clean();
 
-			// If the controller returned a redirect response
-			// then we need to use that...
+			// If the controller returned a response, use it
 			if (isset($response) && $response instanceof Response)
 			{
 				$result->setResponse($response);
 			}
 
-			$result->response()->setBody($output);
-			$result->setBody($output);
+			// check if controller returned a view rather than echoing it
+			if (is_string($response))
+			{
+				$output = $response;
+				$result->response()->setBody($output);
+				$result->setBody($output);
+			}
+			elseif (! empty($response) && ! empty($response->getBody()))
+			{
+				$result->setBody($response->getBody());
+			}
+			else
+			{
+				$result->setBody('');
+			}
 		}
 
 		// If not response code has been sent, assume a success
@@ -163,6 +227,8 @@ trait ControllerTester
 	}
 
 	/**
+	 * Set controller's config, with method chaining.
+	 *
 	 * @param mixed $appConfig
 	 *
 	 * @return mixed
@@ -175,6 +241,8 @@ trait ControllerTester
 	}
 
 	/**
+	 * Set controller's request, with method chaining.
+	 *
 	 * @param mixed $request
 	 *
 	 * @return mixed
@@ -183,10 +251,15 @@ trait ControllerTester
 	{
 		$this->request = $request;
 
+		// Make sure it's available for other classes
+		Services::injectMock('request', $request);
+
 		return $this;
 	}
 
 	/**
+	 * Set controller's response, with method chaining.
+	 *
 	 * @param mixed $response
 	 *
 	 * @return mixed
@@ -199,6 +272,22 @@ trait ControllerTester
 	}
 
 	/**
+	 * Set controller's logger, with method chaining.
+	 *
+	 * @param mixed $logger
+	 *
+	 * @return mixed
+	 */
+	public function withLogger($logger)
+	{
+		$this->logger = $logger;
+
+		return $this;
+	}
+
+	/**
+	 * Set the controller's URI, with method chaining.
+	 *
 	 * @param string $uri
 	 *
 	 * @return mixed
@@ -211,6 +300,8 @@ trait ControllerTester
 	}
 
 	/**
+	 * Set the method's body, with method chaining.
+	 *
 	 * @param mixed $body
 	 *
 	 * @return mixed

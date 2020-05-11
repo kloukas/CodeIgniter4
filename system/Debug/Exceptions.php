@@ -1,5 +1,4 @@
-<?php namespace CodeIgniter\Debug;
-
+<?php
 /**
  * CodeIgniter
  *
@@ -8,6 +7,7 @@
  * This content is released under the MIT License (MIT)
  *
  * Copyright (c) 2014-2019 British Columbia Institute of Technology
+ * Copyright (c) 2019-2020 CodeIgniter Foundation
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -29,21 +29,30 @@
  *
  * @package    CodeIgniter
  * @author     CodeIgniter Dev Team
- * @copyright  2014-2019 British Columbia Institute of Technology (https://bcit.ca/)
+ * @copyright  2019-2020 CodeIgniter Foundation
  * @license    https://opensource.org/licenses/MIT	MIT License
  * @link       https://codeigniter.com
- * @since      Version 3.0.0
+ * @since      Version 4.0.0
  * @filesource
  */
 
+namespace CodeIgniter\Debug;
+
 use CodeIgniter\API\ResponseTrait;
+use CodeIgniter\Exceptions\PageNotFoundException;
+use CodeIgniter\HTTP\IncomingRequest;
+use CodeIgniter\HTTP\Response;
 use Config\Paths;
+use function error_reporting;
+use ErrorException;
+use Throwable;
 
 /**
  * Exceptions manager
  */
 class Exceptions
 {
+
 	use ResponseTrait;
 
 	/**
@@ -62,16 +71,22 @@ class Exceptions
 	protected $viewPath;
 
 	/**
+	 * Config for debug exceptions.
+	 *
 	 * @var \Config\Exceptions
 	 */
 	protected $config;
 
 	/**
+	 * The incoming request.
+	 *
 	 * @var \CodeIgniter\HTTP\IncomingRequest
 	 */
 	protected $request;
 
 	/**
+	 * The outgoing response.
+	 *
 	 * @var \CodeIgniter\HTTP\Response
 	 */
 	protected $response;
@@ -85,7 +100,7 @@ class Exceptions
 	 * @param \CodeIgniter\HTTP\IncomingRequest $request
 	 * @param \CodeIgniter\HTTP\Response        $response
 	 */
-	public function __construct(\Config\Exceptions $config, \CodeIgniter\HTTP\IncomingRequest $request, \CodeIgniter\HTTP\Response $response)
+	public function __construct(\Config\Exceptions $config, IncomingRequest $request, Response $response)
 	{
 		$this->ob_level = ob_get_level();
 
@@ -125,8 +140,9 @@ class Exceptions
 	 *
 	 * @param \Throwable $exception
 	 */
-	public function exceptionHandler(\Throwable $exception)
+	public function exceptionHandler(Throwable $exception)
 	{
+		// @codeCoverageIgnoreStart
 		$codes      = $this->determineCodes($exception);
 		$statusCode = $codes[0];
 		$exitCode   = $codes[1];
@@ -156,6 +172,7 @@ class Exceptions
 		$this->render($exception, $statusCode);
 
 		exit($exitCode);
+		// @codeCoverageIgnoreEnd
 	}
 
 	//--------------------------------------------------------------------
@@ -171,19 +188,18 @@ class Exceptions
 	 * @param string       $message
 	 * @param string|null  $file
 	 * @param integer|null $line
-	 * @param null         $context
 	 *
 	 * @throws \ErrorException
 	 */
-	public function errorHandler(int $severity, string $message, string $file = null, int $line = null, $context = null)
+	public function errorHandler(int $severity, string $message, string $file = null, int $line = null)
 	{
-		if (! (\error_reporting() & $severity))
+		if (! (error_reporting() & $severity))
 		{
 			return;
 		}
 
 		// Convert it to an exception and pass it along.
-		throw new \ErrorException($message, 0, $severity, $file, $line);
+		throw new ErrorException($message, 0, $severity, $file, $line);
 	}
 
 	//--------------------------------------------------------------------
@@ -204,7 +220,7 @@ class Exceptions
 			// Fatal Error?
 			if (in_array($error['type'], [E_ERROR, E_CORE_ERROR, E_COMPILE_ERROR, E_PARSE]))
 			{
-				$this->exceptionHandler(new \ErrorException($error['message'], $error['type'], 0, $error['file'], $error['line']));
+				$this->exceptionHandler(new ErrorException($error['message'], $error['type'], 0, $error['file'], $error['line']));
 			}
 		}
 	}
@@ -220,7 +236,7 @@ class Exceptions
 	 *
 	 * @return string       The path and filename of the view file to use
 	 */
-	protected function determineView(\Throwable $exception, string $template_path): string
+	protected function determineView(Throwable $exception, string $template_path): string
 	{
 		// Production environments should have a custom exception file.
 		$view          = 'production.php';
@@ -232,7 +248,7 @@ class Exceptions
 		}
 
 		// 404 Errors
-		if ($exception instanceof \CodeIgniter\Exceptions\PageNotFoundException)
+		if ($exception instanceof PageNotFoundException)
 		{
 			return 'error_404.php';
 		}
@@ -254,7 +270,7 @@ class Exceptions
 	 * @param \Throwable $exception
 	 * @param integer    $statusCode
 	 */
-	protected function render(\Throwable $exception, int $statusCode)
+	protected function render(Throwable $exception, int $statusCode)
 	{
 		// Determine directory with views
 		$path = $this->viewPath;
@@ -264,9 +280,7 @@ class Exceptions
 			$path  = $paths->viewDirectory . '/errors/';
 		}
 
-		$path = is_cli()
-			? $path . 'cli/'
-			: $path . 'html/';
+		$path = is_cli() ? $path . 'cli/' : $path . 'html/';
 
 		// Determine the vew
 		$view = $this->determineView($exception, $path);
@@ -298,7 +312,7 @@ class Exceptions
 	 *
 	 * @return array
 	 */
-	protected function collectVars(\Throwable $exception, int $statusCode)
+	protected function collectVars(Throwable $exception, int $statusCode): array
 	{
 		return [
 			'title'   => get_class($exception),
@@ -318,7 +332,7 @@ class Exceptions
 	 *
 	 * @return array
 	 */
-	protected function determineCodes(\Throwable $exception): array
+	protected function determineCodes(Throwable $exception): array
 	{
 		$statusCode = abs($exception->getCode());
 
@@ -356,19 +370,22 @@ class Exceptions
 	 *
 	 * @return string
 	 */
-	public static function cleanPath($file)
+	public static function cleanPath(string $file): string
 	{
-		if (strpos($file, APPPATH) === 0)
+		switch (true)
 		{
-			$file = 'APPPATH/' . substr($file, strlen(APPPATH));
-		}
-		elseif (strpos($file, SYSTEMPATH) === 0)
-		{
-			$file = 'SYSTEMPATH/' . substr($file, strlen(SYSTEMPATH));
-		}
-		elseif (strpos($file, FCPATH) === 0)
-		{
-			$file = 'FCPATH/' . substr($file, strlen(FCPATH));
+			case strpos($file, APPPATH) === 0:
+				$file = 'APPPATH' . DIRECTORY_SEPARATOR . substr($file, strlen(APPPATH));
+				break;
+			case strpos($file, SYSTEMPATH) === 0:
+				$file = 'SYSTEMPATH' . DIRECTORY_SEPARATOR . substr($file, strlen(SYSTEMPATH));
+				break;
+			case strpos($file, FCPATH) === 0:
+				$file = 'FCPATH' . DIRECTORY_SEPARATOR . substr($file, strlen(FCPATH));
+				break;
+			case defined('VENDORPATH') && strpos($file, VENDORPATH) === 0;
+				$file = 'VENDORPATH' . DIRECTORY_SEPARATOR . substr($file, strlen(VENDORPATH));
+				break;
 		}
 
 		return $file;
@@ -403,13 +420,13 @@ class Exceptions
 	/**
 	 * Creates a syntax-highlighted version of a PHP file.
 	 *
-	 * @param $file
-	 * @param $lineNumber
-	 * @param integer    $lines
+	 * @param string  $file
+	 * @param integer $lineNumber
+	 * @param integer $lines
 	 *
 	 * @return boolean|string
 	 */
-	public static function highlightFile($file, $lineNumber, $lines = 15)
+	public static function highlightFile(string $file, int $lineNumber, int $lines = 15)
 	{
 		if (empty($file) || ! is_readable($file))
 		{
@@ -430,7 +447,7 @@ class Exceptions
 		{
 			$source = file_get_contents($file);
 		}
-		catch (\Throwable $e)
+		catch (Throwable $e)
 		{
 			return false;
 		}
@@ -449,7 +466,7 @@ class Exceptions
 		$source = array_splice($source, $start, $lines, true);
 
 		// Used to format the line number in the source
-		$format = '% ' . strlen($start + $lines) . 'd';
+		$format = '% ' . strlen(sprintf('%s', $start + $lines)) . 'd';
 
 		$out = '';
 		// Because the highlighting may have an uneven number

@@ -2,10 +2,14 @@
 
 namespace CodeIgniter\Validation;
 
+use CodeIgniter\Test\CIDatabaseTestCase;
 use Config\Database;
+use CodeIgniter\Validation\Rules;
 
-class RulesTest extends \CIUnitTestCase
+class RulesTest extends CIDatabaseTestCase
 {
+	protected $refresh = true;
+
 	/**
 	 * @var Validation
 	 */
@@ -30,7 +34,7 @@ class RulesTest extends \CIUnitTestCase
 
 	//--------------------------------------------------------------------
 
-	protected function setUp()
+	protected function setUp(): void
 	{
 		parent::setUp();
 
@@ -281,6 +285,66 @@ class RulesTest extends \CIUnitTestCase
 				['foo' => 0.0],
 				true,
 			],
+			[
+				['foo' => 'permit_empty|required_with[bar]'],
+				['foo' => ''],
+				true,
+			],
+			[
+				['foo' => 'permit_empty|required_with[bar]'],
+				['foo' => 0],
+				true,
+			],
+			[
+				[
+					'foo' => 'permit_empty|required_with[bar]',
+				],
+				[
+					'foo' => 0.0,
+					'bar' => 1,
+				],
+				true,
+			],
+			[
+				[
+					'foo' => 'permit_empty|required_with[bar]',
+				],
+				[
+					'foo' => '',
+					'bar' => 1,
+				],
+				false,
+			],
+			[
+				['foo' => 'permit_empty|required_without[bar]'],
+				['foo' => ''],
+				false,
+			],
+			[
+				['foo' => 'permit_empty|required_without[bar]'],
+				['foo' => 0],
+				true,
+			],
+			[
+				[
+					'foo' => 'permit_empty|required_without[bar]',
+				],
+				[
+					'foo' => 0.0,
+					'bar' => 1,
+				],
+				true,
+			],
+			[
+				[
+					'foo' => 'permit_empty|required_without[bar]',
+				],
+				[
+					'foo' => '',
+					'bar' => 1,
+				],
+				true,
+			],
 		];
 	}
 
@@ -382,6 +446,156 @@ class RulesTest extends \CIUnitTestCase
 
 	//--------------------------------------------------------------------
 
+	public function testEqualsNull()
+	{
+		$data = [
+			'foo' => null,
+		];
+
+		$this->validation->setRules([
+			'foo' => 'equals[]',
+		]);
+
+		$this->assertFalse($this->validation->run($data));
+	}
+
+	//--------------------------------------------------------------------
+
+	public function testEqualsEmptyIsEmpty()
+	{
+		$data = [
+			'foo' => '',
+		];
+
+		$this->validation->setRules([
+			'foo' => 'equals[]',
+		]);
+
+		$this->assertTrue($this->validation->run($data));
+	}
+
+	//--------------------------------------------------------------------
+
+	public function testEqualsReturnsFalseOnFailure()
+	{
+		$data = [
+			'foo' => 'bar',
+		];
+
+		$this->validation->setRules([
+			'foo' => 'equals[notbar]',
+		]);
+
+		$this->assertFalse($this->validation->run($data));
+	}
+
+	//--------------------------------------------------------------------
+
+	public function testEqualsReturnsTrueOnSuccess()
+	{
+		$data = [
+			'foo' => 'bar',
+		];
+
+		$this->validation->setRules([
+			'foo' => 'equals[bar]',
+		]);
+
+		$this->assertTrue($this->validation->run($data));
+	}
+
+	//--------------------------------------------------------------------
+
+	public function testEqualsReturnsFalseOnCaseMismatch()
+	{
+		$data = [
+			'foo' => 'bar',
+		];
+
+		$this->validation->setRules([
+			'foo' => 'equals[Bar]',
+		]);
+
+		$this->assertFalse($this->validation->run($data));
+	}
+
+	//--------------------------------------------------------------------
+
+	public function testNotEqualsNull()
+	{
+		$data = [
+			'foo' => null,
+		];
+
+		$this->validation->setRules([
+			'foo' => 'not_equals[]',
+		]);
+
+		$this->assertTrue($this->validation->run($data));
+	}
+
+	//--------------------------------------------------------------------
+
+	public function testNotEqualsEmptyIsEmpty()
+	{
+		$data = [
+			'foo' => '',
+		];
+
+		$this->validation->setRules([
+			'foo' => 'not_equals[]',
+		]);
+
+		$this->assertFalse($this->validation->run($data));
+	}
+
+	//--------------------------------------------------------------------
+
+	public function testNotEqualsReturnsFalseOnFailure()
+	{
+		$data = [
+			'foo' => 'bar',
+		];
+
+		$this->validation->setRules([
+			'foo' => 'not_equals[bar]',
+		]);
+
+		$this->assertFalse($this->validation->run($data));
+	}
+
+	//--------------------------------------------------------------------
+
+	public function testNotEqualsReturnsTrueOnSuccess()
+	{
+		$data = [
+			'foo' => 'bar',
+		];
+
+		$this->validation->setRules([
+			'foo' => 'not_equals[notbar]',
+		]);
+
+		$this->assertTrue($this->validation->run($data));
+	}
+
+	//--------------------------------------------------------------------
+
+	public function testNotEqualsReturnsTrueOnCaseMismatch()
+	{
+		$data = [
+			'foo' => 'bar',
+		];
+
+		$this->validation->setRules([
+			'foo' => 'not_equals[Bar]',
+		]);
+
+		$this->assertTrue($this->validation->run($data));
+	}
+
+	//--------------------------------------------------------------------
+
 	/**
 	 * @group DatabaseLive
 	 */
@@ -452,6 +666,186 @@ class RulesTest extends \CIUnitTestCase
 		]);
 
 		$this->assertTrue($this->validation->run($data));
+	}
+
+	//--------------------------------------------------------------------
+
+	/**
+	 * @group DatabaseLive
+	 */
+	public function testIsUniqueIgnoresParamsPlaceholders()
+	{
+		$this->hasInDatabase('user', [
+			'name'    => 'Derek',
+			'email'   => 'derek@world.co.uk',
+			'country' => 'GB',
+		]);
+
+		$db  = Database::connect();
+		$row = $db->table('user')
+				  ->limit(1)
+				  ->get()
+				  ->getRow();
+
+		$data = [
+			'id'    => $row->id,
+			'email' => 'derek@world.co.uk',
+		];
+
+		$this->validation->setRules([
+			'email' => 'is_unique[user.email,id,{id}]',
+		]);
+
+		$this->assertTrue($this->validation->run($data));
+	}
+
+	//--------------------------------------------------------------------
+
+	/**
+	 * @group DatabaseLive
+	 */
+	public function testIsUniqueByManualRun()
+	{
+		$db = Database::connect();
+		$db->table('user')
+				   ->insert([
+					   'name'    => 'Developer A',
+					   'email'   => 'deva@example.com',
+					   'country' => 'Elbonia',
+				   ]);
+
+		$this->assertFalse((new Rules())->is_unique('deva@example.com', 'user.email,id,{id}', []));
+	}
+
+	//--------------------------------------------------------------------
+
+	/**
+	 * @group DatabaseLive
+	 */
+	public function testIsNotUniqueFalse()
+	{
+		$db = Database::connect();
+		$db->table('user')
+		   ->insert([
+			   'name'    => 'Derek Travis',
+			   'email'   => 'derek@world.com',
+			   'country' => 'Elbonia',
+		   ]);
+
+		$data = [
+			'email' => 'derek1@world.com',
+		];
+
+		$this->validation->setRules([
+			'email' => 'is_not_unique[user.email]',
+		]);
+
+		$this->assertFalse($this->validation->run($data));
+	}
+
+	//--------------------------------------------------------------------
+
+	/**
+	 * @group DatabaseLive
+	 */
+	public function testIsNotUniqueTrue()
+	{
+		$db = Database::connect();
+		$db->table('user')
+		   ->insert([
+			   'name'    => 'Derek Travis',
+			   'email'   => 'derek@world.com',
+			   'country' => 'Elbonia',
+		   ]);
+
+		$data = [
+			'email' => 'derek@world.com',
+		];
+
+		$this->validation->setRules([
+			'email' => 'is_not_unique[user.email]',
+		]);
+
+		$this->assertTrue($this->validation->run($data));
+	}
+
+	//--------------------------------------------------------------------
+
+	/**
+	 * @group DatabaseLive
+	 */
+	public function testIsNotUniqueIgnoresParams()
+	{
+		$db   = Database::connect();
+		$user = $db->table('user')
+				   ->insert([
+					   'name'    => 'Developer A',
+					   'email'   => 'deva@example.com',
+					   'country' => 'Elbonia',
+				   ]);
+		$row  = $db->table('user')
+				   ->limit(1)
+				   ->get()
+				   ->getRow();
+
+		$data = [
+			'email' => 'derek@world.co.uk',
+		];
+
+		$this->validation->setRules([
+			'email' => "is_not_unique[user.email,id,{$row->id}]",
+		]);
+
+		$this->assertFalse($this->validation->run($data));
+	}
+
+	//--------------------------------------------------------------------
+
+	/**
+	 * @group DatabaseLive
+	 */
+	public function testIsNotUniqueIgnoresParamsPlaceholders()
+	{
+		$this->hasInDatabase('user', [
+			'name'    => 'Derek',
+			'email'   => 'derek@world.co.uk',
+			'country' => 'GB',
+		]);
+
+		$db  = Database::connect();
+		$row = $db->table('user')
+				  ->limit(1)
+				  ->get()
+				  ->getRow();
+
+		$data = [
+			'id'    => $row->id,
+			'email' => 'derek@world.co.uk',
+		];
+
+		$this->validation->setRules([
+			'email' => 'is_not_unique[user.email,id,{id}]',
+		]);
+
+		$this->assertTrue($this->validation->run($data));
+	}
+
+	//--------------------------------------------------------------------
+
+	/**
+	 * @group DatabaseLive
+	 */
+	public function testIsNotUniqueByManualRun()
+	{
+		$db = Database::connect();
+		$db->table('user')
+				   ->insert([
+					   'name'    => 'Developer A',
+					   'email'   => 'deva@example.com',
+					   'country' => 'Elbonia',
+				   ]);
+
+		$this->assertTrue((new Rules())->is_not_unique('deva@example.com', 'user.email,id,{id}', []));
 	}
 
 	//--------------------------------------------------------------------

@@ -1,4 +1,4 @@
-<?php namespace CodeIgniter\Database\SQLite3;
+<?php
 
 /**
  * CodeIgniter
@@ -8,6 +8,7 @@
  * This content is released under the MIT License (MIT)
  *
  * Copyright (c) 2014-2019 British Columbia Institute of Technology
+ * Copyright (c) 2019-2020 CodeIgniter Foundation
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -29,17 +30,20 @@
  *
  * @package    CodeIgniter
  * @author     CodeIgniter Dev Team
- * @copyright  2014-2019 British Columbia Institute of Technology (https://bcit.ca/)
+ * @copyright  2019-2020 CodeIgniter Foundation
  * @license    https://opensource.org/licenses/MIT	MIT License
  * @link       https://codeigniter.com
- * @since      Version 3.0.0
+ * @since      Version 4.0.0
  * @filesource
  */
 
+namespace CodeIgniter\Database\SQLite3;
+
+use CodeIgniter\Database\ConnectionInterface;
 use CodeIgniter\Database\Exceptions\DatabaseException;
 
 /**
- * Forge for Postgre
+ * Forge for SQLite3
  */
 class Forge extends \CodeIgniter\Database\Forge
 {
@@ -62,8 +66,10 @@ class Forge extends \CodeIgniter\Database\Forge
 
 	/**
 	 * Constructor.
+	 *
+	 * @param $db ConnectionInterface
 	 */
-	public function __construct($db)
+	public function __construct(ConnectionInterface $db)
 	{
 		parent::__construct($db);
 
@@ -79,11 +85,12 @@ class Forge extends \CodeIgniter\Database\Forge
 	/**
 	 * Create database
 	 *
-	 * @param string $db_name
+	 * @param string  $dbName
+	 * @param boolean $ifNotExists Whether to add IF NOT EXISTS condition
 	 *
 	 * @return boolean
 	 */
-	public function createDatabase($db_name): bool
+	public function createDatabase(string $dbName, bool $ifNotExists = false): bool
 	{
 		// In SQLite, a database is created when you connect to the database.
 		// We'll return TRUE so that an error isn't generated.
@@ -95,15 +102,15 @@ class Forge extends \CodeIgniter\Database\Forge
 	/**
 	 * Drop database
 	 *
-	 * @param string $db_name
+	 * @param string $dbName
 	 *
 	 * @return boolean
-	 * @throws \CodeIgniter\DatabaseException
+	 * @throws \CodeIgniter\Database\Exceptions\DatabaseException
 	 */
-	public function dropDatabase($db_name): bool
+	public function dropDatabase(string $dbName): bool
 	{
 		// In SQLite, a database is dropped when we delete a file
-		if (! is_file($db_name))
+		if (! is_file($dbName))
 		{
 			if ($this->db->DBDebug)
 			{
@@ -115,7 +122,7 @@ class Forge extends \CodeIgniter\Database\Forge
 
 		// We need to close the pseudo-connection first
 		$this->db->close();
-		if (! @unlink($db_name))
+		if (! @unlink($dbName))
 		{
 			if ($this->db->DBDebug)
 			{
@@ -127,7 +134,7 @@ class Forge extends \CodeIgniter\Database\Forge
 
 		if (! empty($this->db->dataCache['db_names']))
 		{
-			$key = array_search(strtolower($db_name), array_map('strtolower', $this->db->dataCache['db_names']), true);
+			$key = array_search(strtolower($dbName), array_map('strtolower', $this->db->dataCache['db_names']), true);
 			if ($key !== false)
 			{
 				unset($this->db->dataCache['db_names'][$key]);
@@ -142,15 +149,13 @@ class Forge extends \CodeIgniter\Database\Forge
 	/**
 	 * ALTER TABLE
 	 *
-	 * @todo implement drop_column(), modify_column()
-	 *
 	 * @param string $alter_type ALTER type
 	 * @param string $table      Table name
 	 * @param mixed  $field      Column definition
 	 *
 	 * @return string|array
 	 */
-	protected function _alterTable($alter_type, $table, $field)
+	protected function _alterTable(string $alter_type, string $table, $field)
 	{
 		switch ($alter_type)
 		{
@@ -162,7 +167,6 @@ class Forge extends \CodeIgniter\Database\Forge
 					->run();
 
 				return '';
-				break;
 			case 'CHANGE':
 				$sqlTable = new Table($this->db, $this);
 
@@ -171,7 +175,6 @@ class Forge extends \CodeIgniter\Database\Forge
 						 ->run();
 
 				return null;
-				break;
 			default:
 				return parent::_alterTable($alter_type, $table, $field);
 		}
@@ -186,7 +189,7 @@ class Forge extends \CodeIgniter\Database\Forge
 	 *
 	 * @return string
 	 */
-	protected function _processColumn($field)
+	protected function _processColumn(array $field): string
 	{
 		if ($field['type'] === 'TEXT' && strpos($field['length'], "('") === 0)
 		{
@@ -211,7 +214,7 @@ class Forge extends \CodeIgniter\Database\Forge
 	 *
 	 * @return array
 	 */
-	protected function _processIndexes($table)
+	protected function _processIndexes(string $table): array
 	{
 		$sqls = [];
 
@@ -257,17 +260,16 @@ class Forge extends \CodeIgniter\Database\Forge
 	 *
 	 * @return void
 	 */
-	protected function _attributeType(&$attributes)
+	protected function _attributeType(array &$attributes)
 	{
 		switch (strtoupper($attributes['TYPE']))
 		{
 			case 'ENUM':
 			case 'SET':
 				$attributes['TYPE'] = 'TEXT';
-
-				return;
+				break;
 			default:
-				return;
+				break;
 		}
 	}
 
@@ -281,7 +283,7 @@ class Forge extends \CodeIgniter\Database\Forge
 	 *
 	 * @return void
 	 */
-	protected function _attributeAutoIncrement(&$attributes, &$field)
+	protected function _attributeAutoIncrement(array &$attributes, array &$field)
 	{
 		if (! empty($attributes['AUTO_INCREMENT']) && $attributes['AUTO_INCREMENT'] === true
 			&& stripos($field['type'], 'int') !== false)
@@ -301,15 +303,27 @@ class Forge extends \CodeIgniter\Database\Forge
 	/**
 	 * Foreign Key Drop
 	 *
-	 * @param string $table        Table name
-	 * @param string $foreign_name Foreign name
+	 * @param string $table       Table name
+	 * @param string $foreignName Foreign name
 	 *
 	 * @return boolean
 	 * @throws \CodeIgniter\Database\Exceptions\DatabaseException
 	 */
-	public function dropForeignKey($table, $foreign_name)
+	public function dropForeignKey(string $table, string $foreignName): bool
 	{
-		throw new DatabaseException(lang('Database.dropForeignKeyUnsupported'));
+		// If this version of SQLite doesn't support it, we're done here
+		if ($this->db->supportsForeignKeys() !== true)
+		{
+			return true;
+		}
+
+		// Otherwise we have to copy the table and recreate
+		// without the foreign key being involved now
+		$sqlTable = new Table($this->db, $this);
+
+		return $sqlTable->fromTable($this->db->DBPrefix . $table)
+			->dropForeignKey($foreignName)
+			->run();
 	}
 
 	//--------------------------------------------------------------------

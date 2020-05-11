@@ -1,5 +1,4 @@
-<?php namespace CodeIgniter\Config;
-
+<?php
 /**
  * CodeIgniter
  *
@@ -8,6 +7,7 @@
  * This content is released under the MIT License (MIT)
  *
  * Copyright (c) 2014-2019 British Columbia Institute of Technology
+ * Copyright (c) 2019-2020 CodeIgniter Foundation
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -29,12 +29,19 @@
  *
  * @package    CodeIgniter
  * @author     CodeIgniter Dev Team
- * @copyright  2014-2019 British Columbia Institute of Technology (https://bcit.ca/)
+ * @copyright  2019-2020 CodeIgniter Foundation
  * @license    https://opensource.org/licenses/MIT	MIT License
  * @link       https://codeigniter.com
- * @since      Version 3.0.0
+ * @since      Version 4.0.0
  * @filesource
  */
+
+namespace CodeIgniter\Config;
+
+use CodeIgniter\Autoloader\Autoloader;
+use CodeIgniter\Autoloader\FileLocator;
+use Config\Autoload;
+use Config\Modules;
 
 /**
  * Services Configuration file.
@@ -59,6 +66,7 @@ class BaseService
 	/**
 	 * Cache for instance of any services that
 	 * have been requested as a "shared" instance.
+	 * Keys should be lowercase service names.
 	 *
 	 * @var array
 	 */
@@ -99,6 +107,8 @@ class BaseService
 	 */
 	protected static function getSharedInstance(string $key, ...$params)
 	{
+		$key = strtolower($key);
+
 		// Returns mock if exists
 		if (isset(static::$mocks[$key]))
 		{
@@ -132,13 +142,13 @@ class BaseService
 		{
 			if (empty(static::$instances['autoloader']))
 			{
-				static::$instances['autoloader'] = new \CodeIgniter\Autoloader\Autoloader();
+				static::$instances['autoloader'] = new Autoloader();
 			}
 
 			return static::$instances['autoloader'];
 		}
 
-		return new \CodeIgniter\Autoloader\Autoloader();
+		return new Autoloader();
 	}
 
 	//--------------------------------------------------------------------
@@ -158,7 +168,7 @@ class BaseService
 		{
 			if (empty(static::$instances['locator']))
 			{
-				static::$instances['locator'] = new \CodeIgniter\Autoloader\FileLocator(
+				static::$instances['locator'] = new FileLocator(
 					static::autoloader()
 				);
 			}
@@ -166,7 +176,7 @@ class BaseService
 			return static::$instances['locator'];
 		}
 
-		return new \CodeIgniter\Autoloader\FileLocator(static::autoloader());
+		return new FileLocator(static::autoloader());
 	}
 
 	//--------------------------------------------------------------------
@@ -207,7 +217,7 @@ class BaseService
 
 		if ($init_autoloader)
 		{
-			static::autoloader()->initialize(new \Config\Autoload(), new \Config\Modules());
+			static::autoloader()->initialize(new Autoload(), new Modules());
 		}
 	}
 

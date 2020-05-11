@@ -5,6 +5,16 @@ use CodeIgniter\Exceptions\FrameworkException;
 
 class ImageException extends FrameworkException implements ExceptionInterface
 {
+	public static function forMissingImage()
+	{
+		return new static(lang('Images.sourceImageRequired'));
+	}
+
+	public static function forFileNotSupported()
+	{
+		return new static(lang('Images.fileNotSupported'));
+	}
+
 	public static function forMissingAngle()
 	{
 		return new static(lang('Images.rotationAngleRequired'));
@@ -15,6 +25,11 @@ class ImageException extends FrameworkException implements ExceptionInterface
 		return new static(lang('Images.invalidDirection', [$dir]));
 	}
 
+	public static function forInvalidPath()
+	{
+		return new static(lang('Images.invalidPath'));
+	}
+
 	public static function forEXIFUnsupported()
 	{
 		return new static(lang('Images.exifNotSupported'));
@@ -22,7 +37,7 @@ class ImageException extends FrameworkException implements ExceptionInterface
 
 	public static function forInvalidImageCreate(string $extra = null)
 	{
-		return new static(lang('Images.unsupportedImagecreate') . ' ' . $extra);
+		return new static(lang('Images.unsupportedImageCreate') . ' ' . $extra);
 	}
 
 	public static function forSaveFailed()

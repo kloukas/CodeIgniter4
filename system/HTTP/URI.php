@@ -1,7 +1,4 @@
 <?php
-namespace CodeIgniter\HTTP;
-
-use CodeIgniter\HTTP\Exceptions\HTTPException;
 
 /**
  * CodeIgniter
@@ -11,6 +8,7 @@ use CodeIgniter\HTTP\Exceptions\HTTPException;
  * This content is released under the MIT License (MIT)
  *
  * Copyright (c) 2014-2019 British Columbia Institute of Technology
+ * Copyright (c) 2019-2020 CodeIgniter Foundation
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -32,11 +30,19 @@ use CodeIgniter\HTTP\Exceptions\HTTPException;
  *
  * @package    CodeIgniter
  * @author     CodeIgniter Dev Team
- * @copyright  2014-2019 British Columbia Institute of Technology (https://bcit.ca/)
+ * @copyright  2019-2020 CodeIgniter Foundation
  * @license    https://opensource.org/licenses/MIT	MIT License
  * @link       https://codeigniter.com
- * @since      Version 3.0.0
+ * @since      Version 4.0.0
  * @filesource
+ */
+
+namespace CodeIgniter\HTTP;
+
+use CodeIgniter\HTTP\Exceptions\HTTPException;
+
+/**
+ * Abstraction for a uniform resource identifier (URI).
  */
 class URI
 {
@@ -74,49 +80,49 @@ class URI
 	/**
 	 * The URI Scheme.
 	 *
-	 * @var
+	 * @var string
 	 */
 	protected $scheme = 'http';
 
 	/**
 	 * URI User Info
 	 *
-	 * @var
+	 * @var string
 	 */
 	protected $user;
 
 	/**
 	 * URI User Password
 	 *
-	 * @var
+	 * @var string
 	 */
 	protected $password;
 
 	/**
 	 * URI Host
 	 *
-	 * @var
+	 * @var string
 	 */
 	protected $host;
 
 	/**
 	 * URI Port
 	 *
-	 * @var
+	 * @var integer
 	 */
 	protected $port;
 
 	/**
 	 * URI path.
 	 *
-	 * @var
+	 * @var string
 	 */
 	protected $path;
 
 	/**
 	 * The name of any fragment.
 	 *
-	 * @var
+	 * @var string
 	 */
 	protected $fragment = '';
 
@@ -283,7 +289,7 @@ class URI
 	 * The trailing "@" character is not part of the user information and MUST
 	 * NOT be added.
 	 *
-	 * @return string The URI user information, in "username[:password]" format.
+	 * @return string|null The URI user information, in "username[:password]" format.
 	 */
 	public function getUserInfo()
 	{
@@ -327,7 +333,7 @@ class URI
 	 * @see    http://tools.ietf.org/html/rfc3986#section-3.2.2
 	 * @return string The URI host.
 	 */
-	public function getHost()
+	public function getHost(): string
 	{
 		return $this->host;
 	}
@@ -526,7 +532,7 @@ class URI
 	 * Allow the URI to be output as a string by simply casting it to a string
 	 * or echoing out.
 	 */
-	public function __toString()
+	public function __toString(): string
 	{
 		return static::createURIString(
 						$this->getScheme(), $this->getAuthority(), $this->getPath(), // Absolute URIs should use a "/" for an empty path
@@ -539,15 +545,15 @@ class URI
 	/**
 	 * Builds a representation of the string from the component parts.
 	 *
-	 * @param $scheme
-	 * @param $authority
-	 * @param $path
-	 * @param $query
-	 * @param $fragment
+	 * @param string $scheme
+	 * @param string $authority
+	 * @param string $path
+	 * @param string $query
+	 * @param string $fragment
 	 *
 	 * @return string
 	 */
-	public static function createURIString($scheme = null, $authority = null, $path = null, $query = null, $fragment = null)
+	public static function createURIString(string $scheme = null, string $authority = null, string $path = null, string $query = null, string $fragment = null): string
 	{
 		$uri = '';
 		if (! empty($scheme))
@@ -560,7 +566,7 @@ class URI
 			$uri .= $authority;
 		}
 
-		if ($path)
+		if ($path !== '')
 		{
 			$uri .= substr($uri, -1, 1) !== '/' ? '/' . ltrim($path, '/') : $path;
 		}
@@ -591,7 +597,12 @@ class URI
 	{
 		$parts = parse_url($str);
 
-		if (empty($parts['host']) && ! empty($parts['path']))
+		if (! isset($parts['path']))
+		{
+			$parts['path'] = $this->getPath();
+		}
+
+		if (empty($parts['host']) && $parts['path'] !== '')
 		{
 			$parts['host'] = $parts['path'];
 			unset($parts['path']);
@@ -699,7 +710,9 @@ class URI
 	{
 		$this->path = $this->filterPath($path);
 
-		$this->segments = explode('/', $this->path);
+		$tempPath = trim($this->path, '/');
+
+		$this->segments = ($tempPath === '') ? [] : explode('/', $tempPath);
 
 		return $this;
 	}
@@ -715,7 +728,9 @@ class URI
 	{
 		$this->path = $this->filterPath(implode('/', $this->segments));
 
-		$this->segments = explode('/', $this->path);
+		$tempPath = trim($this->path, '/');
+
+		$this->segments = ($tempPath === '') ? [] : explode('/', $tempPath);
 
 		return $this;
 	}
@@ -743,76 +758,9 @@ class URI
 			$query = substr($query, 1);
 		}
 
-		$temp  = explode('&', $query);
-		$parts = [];
-
-		foreach ($temp as $index => $part)
-		{
-			list($key, $value) = $this->splitQueryPart($part);
-
-			// Only 1 part?
-			if (is_null($value))
-			{
-				$parts[$key] = null;
-				continue;
-			}
-
-			// URL Decode the value to protect
-			// from double-encoding a URL.
-			// Especially useful with the Pager.
-			$parts[$this->decode($key)] = $this->decode($value);
-		}
-
-		$this->query = $parts;
+		parse_str($query, $this->query);
 
 		return $this;
-	}
-
-	//--------------------------------------------------------------------
-
-	/**
-	 * Checks the value to see if it has been urlencoded and decodes it if so.
-	 * The urlencode check is not perfect but should catch most cases.
-	 *
-	 * @param string $value
-	 *
-	 * @return string
-	 */
-	protected function decode(string $value)
-	{
-		if (empty($value))
-		{
-			return $value;
-		}
-
-		$decoded = urldecode($value);
-
-		// This won't catch all cases, specifically
-		// changing ' ' to '+' has the same length
-		// but doesn't really matter for our cases here.
-		return strlen($decoded) < strlen($value) ? $decoded : $value;
-	}
-
-	/**
-	 * Split a query value into it's key/value elements, if both
-	 * are present.
-	 *
-	 * @param $part
-	 *
-	 * @return array|null
-	 */
-	protected function splitQueryPart(string $part)
-	{
-		$parts = explode('=', $part, 2);
-
-		// If there's only a single element, no pair,
-		// then we return null
-		if (count($parts) === 1)
-		{
-			$parts = null;
-		}
-
-		return $parts;
 	}
 
 	//--------------------------------------------------------------------
@@ -838,7 +786,7 @@ class URI
 	 * Adds a single new element to the query vars.
 	 *
 	 * @param string $key
-	 * @param null   $value
+	 * @param mixed  $value
 	 *
 	 * @return $this
 	 */
@@ -924,9 +872,9 @@ class URI
 	 *
 	 * @param $path
 	 *
-	 * @return mixed|string
+	 * @return string
 	 */
-	protected function filterPath(string $path = null)
+	protected function filterPath(string $path = null): string
 	{
 		$orig = $path;
 
@@ -962,9 +910,9 @@ class URI
 	/**
 	 * Saves our parts from a parse_url call.
 	 *
-	 * @param $parts
+	 * @param array $parts
 	 */
-	protected function applyParts($parts)
+	protected function applyParts(array $parts)
 	{
 		if (! empty($parts['host']))
 		{
@@ -974,7 +922,7 @@ class URI
 		{
 			$this->user = $parts['user'];
 		}
-		if (! empty($parts['path']))
+		if (isset($parts['path']) && $parts['path'] !== '')
 		{
 			$this->path = $this->filterPath($parts['path']);
 		}
@@ -1014,9 +962,11 @@ class URI
 		}
 
 		// Populate our segments array
-		if (! empty($parts['path']))
+		if (isset($parts['path']) && $parts['path'] !== '')
 		{
-			$this->segments = explode('/', trim($parts['path'], '/'));
+			$tempPath = trim($parts['path'], '/');
+
+			$this->segments = ($tempPath === '') ? [] : explode('/', $tempPath);
 		}
 	}
 
@@ -1107,16 +1057,16 @@ class URI
 	 *
 	 * @return string
 	 */
-	protected function mergePaths(URI $base, URI $reference)
+	protected function mergePaths(URI $base, URI $reference): string
 	{
-		if (! empty($base->getAuthority()) && empty($base->getPath()))
+		if (! empty($base->getAuthority()) && $base->getPath() === '')
 		{
 			return '/' . ltrim($reference->getPath(), '/ ');
 		}
 
 		$path = explode('/', $base->getPath());
 
-		if (empty($path[0]))
+		if ($path[0] === '')
 		{
 			unset($path[0]);
 		}
@@ -1143,7 +1093,7 @@ class URI
 	 */
 	public function removeDotSegments(string $path): string
 	{
-		if (empty($path) || $path === '/')
+		if ($path === '' || $path === '/')
 		{
 			return $path;
 		}
@@ -1152,7 +1102,7 @@ class URI
 
 		$input = explode('/', $path);
 
-		if (empty($input[0]))
+		if ($input[0] === '')
 		{
 			unset($input[0]);
 			$input = array_values($input);

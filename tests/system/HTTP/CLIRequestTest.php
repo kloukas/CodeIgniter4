@@ -9,7 +9,7 @@ use Config\App;
  *
  * @backupGlobals enabled
  */
-class CLIRequestTest extends \CIUnitTestCase
+class CLIRequestTest extends \CodeIgniter\Test\CIUnitTestCase
 {
 
 	/**
@@ -17,7 +17,7 @@ class CLIRequestTest extends \CIUnitTestCase
 	 */
 	protected $request;
 
-	protected function setUp()
+	protected function setUp(): void
 	{
 		parent::setUp();
 
@@ -376,7 +376,7 @@ class CLIRequestTest extends \CIUnitTestCase
 		$result = $this->request->fetchGlobal('post');
 
 		$this->assertEquals($post, $result);
-		$this->assertInternalType('array', $result['ANNOUNCEMENTS']);
+		$this->assertIsArray($result['ANNOUNCEMENTS']);
 		$this->assertCount(2, $result['ANNOUNCEMENTS']);
 	}
 
@@ -478,7 +478,6 @@ class CLIRequestTest extends \CIUnitTestCase
 		];
 		$this->request->setGlobal('post', $post);
 
-		//      echo var_dump($this->request->fetchGlobal('post', 'clients[][zipcode]'));
 		$this->assertEquals($expected, $this->request->fetchGlobal('post', 'clients[]'));
 	}
 
@@ -626,9 +625,9 @@ class CLIRequestTest extends \CIUnitTestCase
 
 	public function testMethodReturnsRightStuff()
 	{
-		// Defaults method to GET now.
-		$this->assertEquals('get', $this->request->getMethod());
-		$this->assertEquals('GET', $this->request->getMethod(true));
+		// Defaults method to CLI now.
+		$this->assertEquals('cli', $this->request->getMethod());
+		$this->assertEquals('CLI', $this->request->getMethod(true));
 	}
 
 }

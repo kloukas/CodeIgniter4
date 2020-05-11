@@ -1,7 +1,4 @@
 <?php
-namespace CodeIgniter\HTTP;
-
-use CodeIgniter\HTTP\Exceptions\HTTPException;
 
 /**
  * CodeIgniter
@@ -11,6 +8,7 @@ use CodeIgniter\HTTP\Exceptions\HTTPException;
  * This content is released under the MIT License (MIT)
  *
  * Copyright (c) 2014-2019 British Columbia Institute of Technology
+ * Copyright (c) 2019-2020 CodeIgniter Foundation
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -32,11 +30,19 @@ use CodeIgniter\HTTP\Exceptions\HTTPException;
  *
  * @package    CodeIgniter
  * @author     CodeIgniter Dev Team
- * @copyright  2014-2019 British Columbia Institute of Technology (https://bcit.ca/)
+ * @copyright  2019-2020 CodeIgniter Foundation
  * @license    https://opensource.org/licenses/MIT	MIT License
  * @link       https://codeigniter.com
- * @since      Version 3.0.0
+ * @since      Version 4.0.0
  * @filesource
+ */
+
+namespace CodeIgniter\HTTP;
+
+use CodeIgniter\HTTP\Exceptions\HTTPException;
+
+/**
+ * An HTTP message
  */
 class Message
 {
@@ -78,7 +84,7 @@ class Message
 	/**
 	 * Message body
 	 *
-	 * @var string
+	 * @var mixed
 	 */
 	protected $body;
 
@@ -102,7 +108,7 @@ class Message
 	/**
 	 * Sets the body of the current message.
 	 *
-	 * @param $data
+	 * @param mixed $data
 	 *
 	 * @return Message|Response
 	 */
@@ -192,7 +198,7 @@ class Message
 	 *
 	 * @return array|\CodeIgniter\HTTP\Header
 	 */
-	public function getHeader($name)
+	public function getHeader(string $name)
 	{
 		$orig_name = $this->getHeaderName($name);
 
@@ -209,11 +215,11 @@ class Message
 	/**
 	 * Determines whether a header exists.
 	 *
-	 * @param $name
+	 * @param string $name
 	 *
 	 * @return boolean
 	 */
-	public function hasHeader($name): bool
+	public function hasHeader(string $name): bool
 	{
 		$orig_name = $this->getHeaderName($name);
 
@@ -261,23 +267,16 @@ class Message
 	 */
 	public function setHeader(string $name, $value)
 	{
-		if (! isset($this->headers[$name]))
+		$origName = $this->getHeaderName($name);
+
+		if (isset($this->headers[$origName]) && is_array($this->headers[$origName]))
 		{
-			$this->headers[$name] = new Header($name, $value);
-
-			$this->headerMap[strtolower($name)] = $name;
-
-			return $this;
+			$this->appendHeader($origName, $value);
 		}
-
-		if (! is_array($this->headers[$name]))
+		else
 		{
-			$this->headers[$name] = [$this->headers[$name]];
-		}
-
-		if (isset($this->headers[$name]))
-		{
-			$this->headers[$name] = new Header($name, $value);
+			$this->headers[$origName]               = new Header($origName, $value);
+			$this->headerMap[strtolower($origName)] = $origName;
 		}
 
 		return $this;
@@ -313,11 +312,13 @@ class Message
 	 *
 	 * @return Message
 	 */
-	public function appendHeader(string $name, $value)
+	public function appendHeader(string $name, string $value)
 	{
 		$orig_name = $this->getHeaderName($name);
 
-		$this->headers[$orig_name]->appendValue($value);
+		array_key_exists($orig_name, $this->headers)
+			? $this->headers[$orig_name]->appendValue($value)
+			: $this->setHeader($name, $value);
 
 		return $this;
 	}
@@ -333,7 +334,7 @@ class Message
 	 *
 	 * @return Message
 	 */
-	public function prependHeader(string $name, $value)
+	public function prependHeader(string $name, string $value)
 	{
 		$orig_name = $this->getHeaderName($name);
 
@@ -390,7 +391,7 @@ class Message
 	 *
 	 * @return string
 	 */
-	protected function getHeaderName($name): string
+	protected function getHeaderName(string $name): string
 	{
 		$lower_name = strtolower($name);
 

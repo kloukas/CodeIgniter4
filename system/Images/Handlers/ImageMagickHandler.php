@@ -1,4 +1,4 @@
-<?php namespace CodeIgniter\Images\Handlers;
+<?php
 
 /**
  * CodeIgniter
@@ -8,6 +8,7 @@
  * This content is released under the MIT License (MIT)
  *
  * Copyright (c) 2014-2019 British Columbia Institute of Technology
+ * Copyright (c) 2019-2020 CodeIgniter Foundation
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -29,15 +30,16 @@
  *
  * @package    CodeIgniter
  * @author     CodeIgniter Dev Team
- * @copyright  2014-2019 British Columbia Institute of Technology (https://bcit.ca/)
+ * @copyright  2019-2020 CodeIgniter Foundation
  * @license    https://opensource.org/licenses/MIT    MIT License
  * @link       https://codeigniter.com
- * @since      Version 3.0.0
+ * @since      Version 4.0.0
  * @filesource
  */
 
+namespace CodeIgniter\Images\Handlers;
+
 use CodeIgniter\Images\Exceptions\ImageException;
-use CodeIgniter\Images\Image;
 
 /**
  * Class ImageMagickHandler
@@ -55,8 +57,6 @@ use CodeIgniter\Images\Image;
 class ImageMagickHandler extends BaseHandler
 {
 
-	public $version;
-
 	/**
 	 * Stores image resource in memory.
 	 *
@@ -66,6 +66,12 @@ class ImageMagickHandler extends BaseHandler
 
 	//--------------------------------------------------------------------
 
+	/**
+	 * Constructor.
+	 *
+	 * @param  type $config
+	 * @throws type
+	 */
 	public function __construct($config = null)
 	{
 		parent::__construct($config);
@@ -87,10 +93,11 @@ class ImageMagickHandler extends BaseHandler
 	 * @param boolean $maintainRatio
 	 *
 	 * @return ImageMagickHandler
+	 * @throws \Exception
 	 */
 	public function _resize(bool $maintainRatio = false)
 	{
-		$source      = ! empty($this->resource) ? $this->resource : $this->image->getPathname();
+		$source      = ! empty($this->resource) ? $this->resource : $this->image()->getPathname();
 		$destination = $this->getResourcePath();
 
 		$escape = '\\';
@@ -112,10 +119,11 @@ class ImageMagickHandler extends BaseHandler
 	 * Crops the image.
 	 *
 	 * @return boolean|\CodeIgniter\Images\Handlers\ImageMagickHandler
+	 * @throws \Exception
 	 */
 	public function _crop()
 	{
-		$source      = ! empty($this->resource) ? $this->resource : $this->image->getPathname();
+		$source      = ! empty($this->resource) ? $this->resource : $this->image()->getPathname();
 		$destination = $this->getResourcePath();
 
 		$action = ' -crop ' . $this->width . 'x' . $this->height . '+' . $this->xAxis . '+' . $this->yAxis . ' "' . $source . '" "' . $destination . '"';
@@ -134,12 +142,13 @@ class ImageMagickHandler extends BaseHandler
 	 * @param integer $angle
 	 *
 	 * @return $this
+	 * @throws \Exception
 	 */
 	protected function _rotate(int $angle)
 	{
 		$angle = '-rotate ' . $angle;
 
-		$source      = ! empty($this->resource) ? $this->resource : $this->image->getPathname();
+		$source      = ! empty($this->resource) ? $this->resource : $this->image()->getPathname();
 		$destination = $this->getResourcePath();
 
 		$action = ' ' . $angle . ' "' . $source . '" "' . $destination . '"';
@@ -159,12 +168,13 @@ class ImageMagickHandler extends BaseHandler
 	 * @param integer $blue
 	 *
 	 * @return $this
+	 * @throws \Exception
 	 */
 	public function _flatten(int $red = 255, int $green = 255, int $blue = 255)
 	{
 		$flatten = "-background RGB({$red},{$green},{$blue}) -flatten";
 
-		$source      = ! empty($this->resource) ? $this->resource : $this->image->getPathname();
+		$source      = ! empty($this->resource) ? $this->resource : $this->image()->getPathname();
 		$destination = $this->getResourcePath();
 
 		$action = ' ' . $flatten . ' "' . $source . '" "' . $destination . '"';
@@ -182,12 +192,13 @@ class ImageMagickHandler extends BaseHandler
 	 * @param string $direction
 	 *
 	 * @return $this
+	 * @throws \Exception
 	 */
 	public function _flip(string $direction)
 	{
 		$angle = $direction === 'horizontal' ? '-flop' : '-flip';
 
-		$source      = ! empty($this->resource) ? $this->resource : $this->image->getPathname();
+		$source      = ! empty($this->resource) ? $this->resource : $this->image()->getPathname();
 		$destination = $this->getResourcePath();
 
 		$action = ' ' . $angle . ' "' . $source . '" "' . $destination . '"';
@@ -200,11 +211,11 @@ class ImageMagickHandler extends BaseHandler
 	//--------------------------------------------------------------------
 
 	/**
-	 * Get GD version
+	 * Get driver version
 	 *
-	 * @return mixed
+	 * @return string
 	 */
-	public function getVersion()
+	public function getVersion(): string
 	{
 		$result = $this->process('-version');
 
@@ -222,9 +233,10 @@ class ImageMagickHandler extends BaseHandler
 	 * @param string  $action
 	 * @param integer $quality
 	 *
-	 * @return ImageMagickHandler|boolean
+	 * @return array  Lines of output from shell command
+	 * @throws \Exception
 	 */
-	protected function process(string $action, int $quality = 100)
+	protected function process(string $action, int $quality = 100): array
 	{
 		// Do we have a vaild library path?
 		if (empty($this->config->libraryPath))
@@ -272,9 +284,9 @@ class ImageMagickHandler extends BaseHandler
 	 *
 	 * @return boolean
 	 */
-	public function save(string $target = null, int $quality = 90)
+	public function save(string $target = null, int $quality = 90): bool
 	{
-		$target = empty($target) ? $this->image : $target;
+		$target = empty($target) ? $this->image() : $target;
 
 		// If no new resource has been created, then we're
 		// simply copy the existing one.
@@ -283,7 +295,7 @@ class ImageMagickHandler extends BaseHandler
 			$name = basename($target);
 			$path = pathinfo($target, PATHINFO_DIRNAME);
 
-			return $this->image->copy($path, $name);
+			return $this->image()->copy($path, $name);
 		}
 
 		// Copy the file through ImageMagick so that it has
@@ -294,7 +306,7 @@ class ImageMagickHandler extends BaseHandler
 
 		unlink($this->resource);
 
-		return $result;
+		return true;
 	}
 
 	//--------------------------------------------------------------------
@@ -312,6 +324,7 @@ class ImageMagickHandler extends BaseHandler
 	 * during the process, we'll use a PNG as the temp file type.
 	 *
 	 * @return resource|boolean
+	 * @throws \Exception
 	 */
 	protected function getResourcePath()
 	{
@@ -328,10 +341,24 @@ class ImageMagickHandler extends BaseHandler
 	//--------------------------------------------------------------------
 
 	/**
+	 * Make the image resource object if needed
+	 *
+	 * @throws \Exception
+	 */
+	protected function ensureResource()
+	{
+		$this->getResourcePath();
+	}
+
+	//--------------------------------------------------------------------
+
+	/**
 	 * Handler-specific method for overlaying text on an image.
 	 *
 	 * @param string $text
 	 * @param array  $options
+	 *
+	 * @throws \Exception
 	 */
 	protected function _text(string $text, array $options = [])
 	{
@@ -418,7 +445,7 @@ class ImageMagickHandler extends BaseHandler
 		// Text
 		$cmd .= " -annotate 0 '{$text}'";
 
-		$source      = ! empty($this->resource) ? $this->resource : $this->image->getPathname();
+		$source      = ! empty($this->resource) ? $this->resource : $this->image()->getPathname();
 		$destination = $this->getResourcePath();
 
 		$cmd = " '{$source}' {$cmd} '{$destination}'";
@@ -428,13 +455,21 @@ class ImageMagickHandler extends BaseHandler
 
 	//--------------------------------------------------------------------
 
-		//--------------------------------------------------------------------
-
+	/**
+	 * Return the width of an image.
+	 *
+	 * @return type
+	 */
 	public function _getWidth()
 	{
 		return imagesx($this->resource);
 	}
 
+	/**
+	 * Return the height of an image.
+	 *
+	 * @return type
+	 */
 	public function _getHeight()
 	{
 		return imagesy($this->resource);

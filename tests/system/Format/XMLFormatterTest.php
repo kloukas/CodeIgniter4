@@ -1,10 +1,10 @@
 <?php namespace CodeIgniter\Format;
 
-class XMLFormatterTest extends \CIUnitTestCase
+class XMLFormatterTest extends \CodeIgniter\Test\CIUnitTestCase
 {
 	protected $xmlFormatter;
 
-	protected function setUp()
+	protected function setUp(): void
 	{
 		parent::setUp();
 		$this->xmlFormatter = new XMLFormatter();

@@ -1,6 +1,5 @@
 <?php
 
-namespace CodeIgniter\HTTP;
 
 /**
  * CodeIgniter
@@ -10,6 +9,7 @@ namespace CodeIgniter\HTTP;
  * This content is released under the MIT License (MIT)
  *
  * Copyright (c) 2014-2019 British Columbia Institute of Technology
+ * Copyright (c) 2019-2020 CodeIgniter Foundation
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -31,12 +31,14 @@ namespace CodeIgniter\HTTP;
  *
  * @package    CodeIgniter
  * @author     CodeIgniter Dev Team
- * @copyright  2014-2019 British Columbia Institute of Technology (https://bcit.ca/)
+ * @copyright  2019-2020 CodeIgniter Foundation
  * @license    https://opensource.org/licenses/MIT	MIT License
  * @link       https://codeigniter.com
- * @since      Version 3.0.0
+ * @since      Version 4.0.0
  * @filesource
  */
+
+namespace CodeIgniter\HTTP;
 
 use CodeIgniter\HTTP\Exceptions\HTTPException;
 use Config\App;
@@ -398,7 +400,7 @@ class CURLRequest extends Request
 	 *
 	 * @return string
 	 */
-	public function getMethod($upper = false): string
+	public function getMethod(bool $upper = false): string
 	{
 		return ($upper) ? strtoupper($this->method) : strtolower($this->method);
 	}
@@ -486,6 +488,13 @@ class CURLRequest extends Request
 	 */
 	protected function applyRequestHeaders(array $curl_options = []): array
 	{
+		if (empty($this->headers))
+		{
+			$this->populateHeaders();
+			// Otherwise, it will corrupt the request
+			$this->removeHeader('Host');
+		}
+
 		$headers = $this->getHeaders();
 
 		if (empty($headers))
@@ -513,9 +522,9 @@ class CURLRequest extends Request
 	 * @param string $method
 	 * @param array  $curl_options
 	 *
-	 * @return array|integer
+	 * @return array
 	 */
-	protected function applyMethod($method, array $curl_options): array
+	protected function applyMethod(string $method, array $curl_options): array
 	{
 		$method = strtoupper($method);
 
@@ -527,9 +536,7 @@ class CURLRequest extends Request
 		// Have content?
 		if ($size === null || $size > 0)
 		{
-			$curl_options = $this->applyBody($curl_options);
-
-			return $curl_options;
+			return $this->applyBody($curl_options);
 		}
 
 		if ($method === 'PUT' || $method === 'POST')
@@ -537,7 +544,7 @@ class CURLRequest extends Request
 			// See http://tools.ietf.org/html/rfc7230#section-3.3.2
 			if (is_null($this->getHeader('content-length')))
 			{
-				$this->setHeader('Content-Length', 0);
+				$this->setHeader('Content-Length', '0');
 			}
 		}
 		else if ($method === 'HEAD')
@@ -671,10 +678,10 @@ class CURLRequest extends Request
 		}
 
 		// Debug
-		if (isset($config['debug']))
+		if ($config['debug'])
 		{
-			$curl_options[CURLOPT_VERBOSE] = $config['debug'] === true ? 1 : 0;
-			$curl_options[CURLOPT_STDERR]  = is_bool($config['debug']) ? fopen('php://output', 'w+') : $config['debug'];
+			$curl_options[CURLOPT_VERBOSE] = 1;
+			$curl_options[CURLOPT_STDERR]  = is_string($config['debug']) ? fopen($config['debug'], 'a+') : fopen('php://stderr', 'w');
 		}
 
 		// Decode Content
@@ -762,6 +769,7 @@ class CURLRequest extends Request
 			$json = json_encode($config['json']);
 			$this->setBody($json);
 			$this->setHeader('Content-Type', 'application/json');
+			$this->setHeader('Content-Length', (string) strlen($json));
 		}
 
 		// version

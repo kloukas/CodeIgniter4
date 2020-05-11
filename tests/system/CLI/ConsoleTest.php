@@ -1,15 +1,16 @@
 <?php namespace CodeIgniter\CLI;
 
-use Tests\Support\MockCodeIgniter;
-use Tests\Support\Config\MockCLIConfig;
+use CodeIgniter\HTTP\CLIRequest;
 use CodeIgniter\Test\Filters\CITestStreamFilter;
+use CodeIgniter\Test\Mock\MockCLIConfig;
+use CodeIgniter\Test\Mock\MockCodeIgniter;
 
-class ConsoleTest extends \CIUnitTestCase
+class ConsoleTest extends \CodeIgniter\Test\CIUnitTestCase
 {
 
 	private $stream_filter;
 
-	protected function setUp()
+	protected function setUp(): void
 	{
 		parent::setUp();
 
@@ -35,7 +36,7 @@ class ConsoleTest extends \CIUnitTestCase
 		$this->app = new MockCodeIgniter(new MockCLIConfig());
 	}
 
-	public function tearDown()
+	public function tearDown(): void
 	{
 		stream_filter_remove($this->stream_filter);
 	}
@@ -56,6 +57,9 @@ class ConsoleTest extends \CIUnitTestCase
 
 	public function testRun()
 	{
+		$request = new CLIRequest(config('App'));
+		$this->app->setRequest($request);
+
 		$console = new \CodeIgniter\CLI\Console($this->app);
 		$console->run(true);
 		$result = CITestStreamFilter::$buffer;
@@ -64,8 +68,8 @@ class ConsoleTest extends \CIUnitTestCase
 		ob_end_clean();
 
 		// make sure the result looks like a command list
-		$this->assertContains('Lists the available commands.', $result);
-		$this->assertContains('Displays basic usage information.', $result);
+		$this->assertStringContainsString('Lists the available commands.', $result);
+		$this->assertStringContainsString('Displays basic usage information.', $result);
 	}
 
 }

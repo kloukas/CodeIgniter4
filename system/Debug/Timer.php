@@ -1,4 +1,4 @@
-<?php namespace CodeIgniter\Debug;
+<?php
 
 /**
  * CodeIgniter
@@ -8,6 +8,7 @@
  * This content is released under the MIT License (MIT)
  *
  * Copyright (c) 2014-2019 British Columbia Institute of Technology
+ * Copyright (c) 2019-2020 CodeIgniter Foundation
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -29,12 +30,14 @@
  *
  * @package    CodeIgniter
  * @author     CodeIgniter Dev Team
- * @copyright  2014-2019 British Columbia Institute of Technology (https://bcit.ca/)
+ * @copyright  2019-2020 CodeIgniter Foundation
  * @license    https://opensource.org/licenses/MIT	MIT License
  * @link       https://codeigniter.com
- * @since      Version 3.0.0
+ * @since      Version 4.0.0
  * @filesource
  */
+
+namespace CodeIgniter\Debug;
 
 /**
  * Class Timer
@@ -42,10 +45,7 @@
  * Provides a simple way to measure the amount of time
  * that elapses between two points.
  *
- * NOTE: All methods are static since the class is intended
- * to measure throughout an entire application's life cycle.
- *
- * @package CodeIgniter\Benchmark
+ * @package CodeIgniter\Debug
  */
 class Timer
 {
@@ -146,7 +146,7 @@ class Timer
 	 *
 	 * @return array
 	 */
-	public function getTimers(int $decimals = 4)
+	public function getTimers(int $decimals = 4): array
 	{
 		$timers = $this->timers;
 
@@ -172,7 +172,7 @@ class Timer
 	 *
 	 * @return boolean
 	 */
-	public function has(string $name)
+	public function has(string $name): bool
 	{
 		return array_key_exists(strtolower($name), $this->timers);
 	}

@@ -1,5 +1,4 @@
 <?php
-namespace CodeIgniter\Test;
 
 /**
  * CodeIgniter
@@ -9,6 +8,7 @@ namespace CodeIgniter\Test;
  * This content is released under the MIT License (MIT)
  *
  * Copyright (c) 2014-2019 British Columbia Institute of Technology
+ * Copyright (c) 2019-2020 CodeIgniter Foundation
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -30,17 +30,18 @@ namespace CodeIgniter\Test;
  *
  * @package    CodeIgniter
  * @author     CodeIgniter Dev Team
- * @copyright  2014-2019 British Columbia Institute of Technology (https://bcit.ca/)
+ * @copyright  2019-2020 CodeIgniter Foundation
  * @license    https://opensource.org/licenses/MIT	MIT License
  * @link       https://codeigniter.com
- * @since      Version 3.0.0
+ * @since      Version 4.0.0
  * @filesource
  */
 
-use Config\Paths;
+namespace CodeIgniter\Test;
+
 use CodeIgniter\Events\Events;
+use Config\Paths;
 use PHPUnit\Framework\TestCase;
-use Tests\Support\Log\TestLogger;
 
 /**
  * PHPunit test case.
@@ -55,7 +56,7 @@ class CIUnitTestCase extends TestCase
 	 */
 	protected $app;
 
-	protected function setUp()
+	protected function setUp(): void
 	{
 		parent::setUp();
 
@@ -74,6 +75,7 @@ class CIUnitTestCase extends TestCase
 	 * @param string $level
 	 * @param null   $expectedMessage
 	 *
+	 * @return boolean
 	 * @throws \Exception
 	 */
 	public function assertLogged(string $level, $expectedMessage = null)
@@ -126,6 +128,11 @@ class CIUnitTestCase extends TestCase
 	{
 		$found = false;
 
+		if (! function_exists('xdebug_get_headers'))
+		{
+			$this->markTestSkipped('XDebug not found.');
+		}
+
 		foreach (xdebug_get_headers() as $emitted)
 		{
 			$found = $ignoreCase ?
@@ -152,6 +159,11 @@ class CIUnitTestCase extends TestCase
 	public function assertHeaderNotEmitted(string $header, bool $ignoreCase = false): void
 	{
 		$found = false;
+
+		if (! function_exists('xdebug_get_headers'))
+		{
+			$this->markTestSkipped('XDebug not found.');
+		}
 
 		foreach (xdebug_get_headers() as $emitted)
 		{
@@ -199,6 +211,7 @@ class CIUnitTestCase extends TestCase
 	 * @param string  $message
 	 * @param integer $tolerance
 	 *
+	 * @return boolean
 	 * @throws \Exception
 	 */
 	public function assertCloseEnoughString($expected, $actual, string $message = '', int $tolerance = 1)
@@ -250,6 +263,11 @@ class CIUnitTestCase extends TestCase
 	protected function getHeaderEmitted(string $header, bool $ignoreCase = false): ?string
 	{
 		$found = false;
+
+		if (! function_exists('xdebug_get_headers'))
+		{
+			$this->markTestSkipped('XDebug not found.');
+		}
 
 		foreach (xdebug_get_headers() as $emitted)
 		{

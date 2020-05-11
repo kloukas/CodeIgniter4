@@ -1,5 +1,4 @@
-<?php namespace CodeIgniter\Database\Postgre;
-
+<?php
 /**
  * CodeIgniter
  *
@@ -8,6 +7,7 @@
  * This content is released under the MIT License (MIT)
  *
  * Copyright (c) 2014-2019 British Columbia Institute of Technology
+ * Copyright (c) 2019-2020 CodeIgniter Foundation
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -29,12 +29,14 @@
  *
  * @package    CodeIgniter
  * @author     CodeIgniter Dev Team
- * @copyright  2014-2019 British Columbia Institute of Technology (https://bcit.ca/)
+ * @copyright  2019-2020 CodeIgniter Foundation
  * @license    https://opensource.org/licenses/MIT	MIT License
  * @link       https://codeigniter.com
- * @since      Version 3.0.0
+ * @since      Version 4.0.0
  * @filesource
  */
+
+namespace CodeIgniter\Database\Postgre;
 
 use CodeIgniter\Database\BaseBuilder;
 use CodeIgniter\Database\Exceptions\DatabaseException;
@@ -52,41 +54,74 @@ class Builder extends BaseBuilder
 	 */
 	protected $randomKeyword = [
 		'RANDOM()',
-		'RANDOM()',
 	];
+
+	/**
+	 * Specifies which sql statements
+	 * support the ignore option.
+	 *
+	 * @var array
+	 */
+	protected $supportedIgnoreStatements = [
+		'insert' => 'ON CONFLICT DO NOTHING',
+	];
+
+	//--------------------------------------------------------------------
+
+	/**
+	 * Compile Ignore Statement
+	 *
+	 * Checks if the ignore option is supported by
+	 * the Database Driver for the specific statement.
+	 *
+	 * @param string $statement
+	 *
+	 * @return string
+	 */
+	protected function compileIgnore(string $statement)
+	{
+		$sql = parent::compileIgnore($statement);
+
+		if (! empty($sql))
+		{
+			$sql = ' ' . trim($sql);
+		}
+
+		return $sql;
+	}
 
 	//--------------------------------------------------------------------
 
 	/**
 	 * ORDER BY
 	 *
-	 * @param string  $orderby
+	 * @param string  $orderBy
 	 * @param string  $direction ASC, DESC or RANDOM
 	 * @param boolean $escape
 	 *
 	 * @return BaseBuilder
 	 */
-	public function orderBy($orderby, $direction = '', $escape = null)
+	public function orderBy(string $orderBy, string $direction = '', bool $escape = null)
 	{
 		$direction = strtoupper(trim($direction));
 		if ($direction === 'RANDOM')
 		{
-			if (! is_float($orderby) && ctype_digit((string) $orderby))
+			if (! is_float($orderBy) && ctype_digit((string) $orderBy))
 			{
-				$orderby = (float) ($orderby > 1 ? "0.{$orderby}" : $orderby);
+				$orderBy = (float) ($orderBy > 1 ? "0.{$orderBy}" : $orderBy);
 			}
 
-			if (is_float($orderby))
+			if (is_float($orderBy))
 			{
-				$this->db->simpleQuery("SET SEED {$orderby}");
+				$this->db->simpleQuery("SET SEED {$orderBy}");
 			}
 
-			$orderby   = $this->randomKeyword[0];
+			$orderBy   = $this->randomKeyword[0];
 			$direction = '';
 			$escape    = false;
 		}
 
-		return parent::orderBy($orderby, $direction, $escape);
+		return parent::orderBy($orderBy, $direction, $escape);
 	}
 
 	//--------------------------------------------------------------------
@@ -97,7 +132,9 @@ class Builder extends BaseBuilder
 	 * @param string  $column
 	 * @param integer $value
 	 *
-	 * @return boolean
+	 * @throws DatabaseException
+	 *
+	 * @return mixed
 	 */
 	public function increment(string $column, int $value = 1)
 	{
@@ -116,7 +153,9 @@ class Builder extends BaseBuilder
 	 * @param string  $column
 	 * @param integer $value
 	 *
-	 * @return boolean
+	 * @throws DatabaseException
+	 *
+	 * @return mixed
 	 */
 	public function decrement(string $column, int $value = 1)
 	{
@@ -137,14 +176,13 @@ class Builder extends BaseBuilder
 	 * we simply do a DELETE and an INSERT on the first key/value
 	 * combo, assuming that it's either the primary key or a unique key.
 	 *
-	 * @param array   $set       An associative array of insert values
-	 * @param boolean $returnSQL
+	 * @param array $set An associative array of insert values
 	 *
-	 * @return   boolean TRUE on success, FALSE on failure
+	 * @return   mixed
 	 * @throws   DatabaseException
 	 * @internal param true $bool returns the generated SQL, false executes the query.
 	 */
-	public function replace($set = null, $returnSQL = false)
+	public function replace(array $set = null)
 	{
 		if ($set !== null)
 		{
@@ -157,7 +195,9 @@ class Builder extends BaseBuilder
 			{
 				throw new DatabaseException('You must use the "set" method to update an entry.');
 			}
+			// @codeCoverageIgnoreStart
 			return false;
+			// @codeCoverageIgnoreEnd
 		}
 
 		$table = $this->QBFrom[0];
@@ -199,10 +239,9 @@ class Builder extends BaseBuilder
 	 *
 	 * Compiles a delete string and runs the query
 	 *
-	 * @param string  $where
-	 * @param null    $limit
+	 * @param mixed   $where
+	 * @param integer $limit
 	 * @param boolean $reset_data
-	 * @param boolean $returnSQL
 	 *
 	 * @return   mixed
 	 * @throws   DatabaseException
@@ -210,14 +249,14 @@ class Builder extends BaseBuilder
 	 * @internal param the $mixed limit clause
 	 * @internal param $bool
 	 */
-	public function delete($where = '', $limit = null, $reset_data = true, $returnSQL = false)
+	public function delete($where = '', int $limit = null, bool $reset_data = true)
 	{
 		if (! empty($limit) || ! empty($this->QBLimit))
 		{
 			throw new DatabaseException('PostgreSQL does not allow LIMITs on DELETE queries.');
 		}
 
-		return parent::delete($where, $limit, $reset_data, $returnSQL);
+		return parent::delete($where, $limit, $reset_data);
 	}
 
 	//--------------------------------------------------------------------
@@ -231,7 +270,7 @@ class Builder extends BaseBuilder
 	 *
 	 * @return string
 	 */
-	protected function _limit($sql)
+	protected function _limit(string $sql, bool $offsetIgnore = false): string
 	{
 		return $sql . ' LIMIT ' . $this->QBLimit . ($this->QBOffset ? " OFFSET {$this->QBOffset}" : '');
 	}
@@ -251,7 +290,7 @@ class Builder extends BaseBuilder
 	 * @internal param the $string table name
 	 * @internal param the $array update data
 	 */
-	protected function _update($table, $values)
+	protected function _update(string $table, array $values): string
 	{
 		if (! empty($this->QBLimit))
 		{
@@ -275,10 +314,10 @@ class Builder extends BaseBuilder
 	 *
 	 * @return string
 	 */
-	protected function _updateBatch($table, $values, $index)
+	protected function _updateBatch(string $table, array $values, string $index): string
 	{
 		$ids = [];
-		foreach ($values as $key => $val)
+		foreach ($values as $val)
 		{
 			$ids[] = $val[$index];
 
@@ -315,7 +354,7 @@ class Builder extends BaseBuilder
 	 *
 	 * @return string
 	 */
-	protected function _delete($table)
+	protected function _delete(string $table): string
 	{
 		$this->QBLimit = false;
 		return parent::_delete($table);
@@ -335,7 +374,7 @@ class Builder extends BaseBuilder
 	 *
 	 * @return string
 	 */
-	protected function _truncate($table)
+	protected function _truncate(string $table): string
 	{
 		return 'TRUNCATE ' . $table . ' RESTART IDENTITY';
 	}
@@ -350,11 +389,11 @@ class Builder extends BaseBuilder
 	 *
 	 * @see https://www.postgresql.org/docs/9.2/static/functions-matching.html
 	 *
-	 * @param string|null $prefix
-	 * @param string      $column
-	 * @param string|null $not
-	 * @param string      $bind
-	 * @param boolean     $insensitiveSearch
+	 * @param string  $prefix
+	 * @param string  $column
+	 * @param string  $not
+	 * @param string  $bind
+	 * @param boolean $insensitiveSearch
 	 *
 	 * @return string     $like_statement
 	 */

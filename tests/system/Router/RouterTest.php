@@ -3,7 +3,7 @@ namespace CodeIgniter\Router;
 
 use CodeIgniter\Config\Services;
 
-class RouterTest extends \CIUnitTestCase
+class RouterTest extends \CodeIgniter\Test\CIUnitTestCase
 {
 
 	/**
@@ -18,7 +18,12 @@ class RouterTest extends \CIUnitTestCase
 	 */
 	protected $root;
 
-	protected function setUp()
+	/**
+	 * @var \CodeIgniter\HTTP\IncomingRequest
+	 */
+	protected $request;
+
+	protected function setUp(): void
 	{
 		parent::setUp();
 
@@ -45,11 +50,13 @@ class RouterTest extends \CIUnitTestCase
 		];
 
 		$this->collection->map($routes);
+		$this->request = Services::request();
+		$this->request->setMethod('get');
 	}
 
 	//--------------------------------------------------------------------
 
-	public function tearDown()
+	public function tearDown(): void
 	{
 	}
 
@@ -57,7 +64,7 @@ class RouterTest extends \CIUnitTestCase
 
 	public function testEmptyURIMatchesDefaults()
 	{
-		$router = new Router($this->collection);
+		$router = new Router($this->collection, $this->request);
 
 		$router->handle('');
 
@@ -67,9 +74,20 @@ class RouterTest extends \CIUnitTestCase
 
 	//--------------------------------------------------------------------
 
+	public function testZeroAsURIPath()
+	{
+		$router = new Router($this->collection, $this->request);
+
+		$router->handle('0');
+
+		$this->assertEquals('0', $router->controllerName());
+	}
+
+	//--------------------------------------------------------------------
+
 	public function testURIMapsToController()
 	{
-		$router = new Router($this->collection);
+		$router = new Router($this->collection, $this->request);
 
 		$router->handle('users');
 
@@ -81,7 +99,7 @@ class RouterTest extends \CIUnitTestCase
 
 	public function testURIMapsToControllerAltMethod()
 	{
-		$router = new Router($this->collection);
+		$router = new Router($this->collection, $this->request);
 
 		$router->handle('posts');
 
@@ -93,7 +111,7 @@ class RouterTest extends \CIUnitTestCase
 
 	public function testURIMapsToNamespacedController()
 	{
-		$router = new Router($this->collection);
+		$router = new Router($this->collection, $this->request);
 
 		$router->handle('pages');
 
@@ -105,7 +123,7 @@ class RouterTest extends \CIUnitTestCase
 
 	public function testURIMapsParamsToBackReferences()
 	{
-		$router = new Router($this->collection);
+		$router = new Router($this->collection, $this->request);
 
 		$router->handle('posts/123');
 
@@ -117,7 +135,7 @@ class RouterTest extends \CIUnitTestCase
 
 	public function testURIMapsParamsToRearrangedBackReferences()
 	{
-		$router = new Router($this->collection);
+		$router = new Router($this->collection, $this->request);
 
 		$router->handle('posts/123/edit');
 
@@ -129,7 +147,7 @@ class RouterTest extends \CIUnitTestCase
 
 	public function testURIMapsParamsToBackReferencesWithUnused()
 	{
-		$router = new Router($this->collection);
+		$router = new Router($this->collection, $this->request);
 
 		$router->handle('books/123/sometitle/456');
 
@@ -144,7 +162,7 @@ class RouterTest extends \CIUnitTestCase
 	 */
 	public function testURIMapsParamsWithMany()
 	{
-		$router = new Router($this->collection);
+		$router = new Router($this->collection, $this->request);
 
 		$router->handle('objects/123/sort/abc/FOO');
 
@@ -156,15 +174,15 @@ class RouterTest extends \CIUnitTestCase
 
 	public function testClosures()
 	{
-		$router = new Router($this->collection);
+		$router = new Router($this->collection, $this->request);
 
-		$router->handle('closure/123/alpha');
+		$router->handle('closure/123/alpha', $this->request);
 
 		$closure = $router->controllerName();
 
 		$expects = $closure(...$router->params());
 
-		$this->assertInternalType('callable', $router->controllerName());
+		$this->assertIsCallable($router->controllerName());
 		$this->assertEquals($expects, '123-alpha');
 	}
 
@@ -172,7 +190,7 @@ class RouterTest extends \CIUnitTestCase
 
 	public function testAutoRouteFindsControllerWithFileAndMethod()
 	{
-		$router = new Router($this->collection);
+		$router = new Router($this->collection, $this->request);
 
 		$router->autoRoute('myController/someMethod');
 
@@ -184,7 +202,7 @@ class RouterTest extends \CIUnitTestCase
 
 	public function testAutoRouteFindsControllerWithFile()
 	{
-		$router = new Router($this->collection);
+		$router = new Router($this->collection, $this->request);
 
 		$router->autoRoute('myController');
 
@@ -196,7 +214,7 @@ class RouterTest extends \CIUnitTestCase
 
 	public function testAutoRouteFindsControllerWithSubfolder()
 	{
-		$router = new Router($this->collection);
+		$router = new Router($this->collection, $this->request);
 
 		mkdir(APPPATH . 'Controllers/Subfolder');
 
@@ -212,7 +230,7 @@ class RouterTest extends \CIUnitTestCase
 
 	public function testDetectsLocales()
 	{
-		$router = new Router($this->collection);
+		$router = new Router($this->collection, $this->request);
 
 		$router->handle('fr/pages');
 
@@ -224,7 +242,7 @@ class RouterTest extends \CIUnitTestCase
 
 	public function testRouteResource()
 	{
-		$router = new Router($this->collection);
+		$router = new Router($this->collection, $this->request);
 
 		$router->handle('Admin/Admins');
 
@@ -236,7 +254,7 @@ class RouterTest extends \CIUnitTestCase
 
 	public function testRouteWithLeadingSlash()
 	{
-		$router = new Router($this->collection);
+		$router = new Router($this->collection, $this->request);
 
 		$router->handle('some/slash');
 
@@ -261,7 +279,7 @@ class RouterTest extends \CIUnitTestCase
 		$this->collection->add('baz', function () {
 		}, $optionsBaz);
 
-		$router = new Router($this->collection);
+		$router = new Router($this->collection, $this->request);
 
 		$router->handle('foo');
 
@@ -276,7 +294,7 @@ class RouterTest extends \CIUnitTestCase
 			$routes->add('bar', 'TestController::foobar');
 		});
 
-		$router = new Router($collection);
+		$router = new Router($collection, $this->request);
 
 		$router->handle('foo/bar');
 
@@ -306,11 +324,9 @@ class RouterTest extends \CIUnitTestCase
 		];
 
 		// GET
-		$this->collection->setHTTPVerb('get');
-
 		$this->collection->group(...$group);
 
-		$router = new Router($this->collection);
+		$router = new Router($this->collection, $this->request);
 
 		$router->handle('api/posts');
 
@@ -337,11 +353,10 @@ class RouterTest extends \CIUnitTestCase
 		$this->assertEquals('api-auth', $router->getFilter());
 
 		// POST
-		$this->collection->setHTTPVerb('post');
-
 		$this->collection->group(...$group);
 
-		$router = new Router($this->collection);
+		$router = new Router($this->collection, $this->request);
+		$this->collection->setHTTPVerb('post');
 
 		$router->handle('api/posts');
 
@@ -350,11 +365,10 @@ class RouterTest extends \CIUnitTestCase
 		$this->assertEquals('api-auth', $router->getFilter());
 
 		// PUT
-		$this->collection->setHTTPVerb('put');
-
 		$this->collection->group(...$group);
 
-		$router = new Router($this->collection);
+		$router = new Router($this->collection, $this->request);
+		$this->collection->setHTTPVerb('put');
 
 		$router->handle('api/posts/50');
 
@@ -363,11 +377,10 @@ class RouterTest extends \CIUnitTestCase
 		$this->assertEquals('api-auth', $router->getFilter());
 
 		// PATCH
-		$this->collection->setHTTPVerb('patch');
-
 		$this->collection->group(...$group);
 
-		$router = new Router($this->collection);
+		$router = new Router($this->collection, $this->request);
+		$this->collection->setHTTPVerb('patch');
 
 		$router->handle('api/posts/50');
 
@@ -376,11 +389,10 @@ class RouterTest extends \CIUnitTestCase
 		$this->assertEquals('api-auth', $router->getFilter());
 
 		// DELETE
-		$this->collection->setHTTPVerb('delete');
-
 		$this->collection->group(...$group);
 
-		$router = new Router($this->collection);
+		$router = new Router($this->collection, $this->request);
+		$this->collection->setHTTPVerb('delete');
 
 		$router->handle('api/posts/50');
 
@@ -403,7 +415,7 @@ class RouterTest extends \CIUnitTestCase
 		$this->collection->get('news/(:segment)', 'News::view/$1');
 		$this->collection->add('(:any)', 'Pages::view/$1');
 
-		$router = new Router($this->collection);
+		$router = new Router($this->collection, $this->request);
 
 		$router->handle('/');
 		$this->assertEquals('\Home', $router->controllerName());
@@ -429,12 +441,11 @@ class RouterTest extends \CIUnitTestCase
 	 */
 	public function testRouteOrder()
 	{
-		$this->collection->setHTTPVerb('post');
-
 		$this->collection->post('auth', 'Main::auth_post');
 		$this->collection->add('auth', 'Main::index');
 
-		$router = new Router($this->collection);
+		$router = new Router($this->collection, $this->request);
+		$this->collection->setHTTPVerb('post');
 
 		$router->handle('auth');
 		$this->assertEquals('\Main', $router->controllerName());
@@ -446,7 +457,7 @@ class RouterTest extends \CIUnitTestCase
 	 */
 	public function testTranslateURIDashes()
 	{
-		$router = new Router($this->collection);
+		$router = new Router($this->collection, $this->request);
 
 		$router->handle('user-setting/show-list');
 
@@ -463,7 +474,7 @@ class RouterTest extends \CIUnitTestCase
 	 */
 	public function testTranslateURIDashesForParams()
 	{
-		$router = new Router($this->collection);
+		$router = new Router($this->collection, $this->request);
 		$router->setTranslateURIDashes(true);
 
 		$router->handle('user-setting/2018-12-02');
@@ -480,7 +491,7 @@ class RouterTest extends \CIUnitTestCase
 	 */
 	public function testTranslateURIDashesForAutoRoute()
 	{
-		$router = new Router($this->collection);
+		$router = new Router($this->collection, $this->request);
 		$router->setTranslateURIDashes(true);
 
 		$router->autoRoute('admin-user/show-list');
@@ -490,4 +501,23 @@ class RouterTest extends \CIUnitTestCase
 	}
 
 	//--------------------------------------------------------------------
+
+	/**
+	 * @see https://github.com/codeigniter4/CodeIgniter4/issues/2032
+	 */
+	public function testAutoRouteMatchesZeroParams()
+	{
+		$router = new Router($this->collection, $this->request);
+
+		$router->autoRoute('myController/someMethod/0/abc');
+
+		$this->assertEquals('MyController', $router->controllerName());
+		$this->assertEquals('someMethod', $router->methodName());
+
+		$expected = [
+			'0',
+			'abc',
+		];
+		$this->assertEquals($expected, $router->params());
+	}
 }

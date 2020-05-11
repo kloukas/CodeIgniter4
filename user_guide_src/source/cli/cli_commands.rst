@@ -129,7 +129,7 @@ Our demo command might have a ``run`` method something like::
     public function run(array $params)
     {
         CLI::write('PHP Version: '. CLI::color(phpversion(), 'yellow'));
-        CLI::write('CI Version: '. CLI::color(CodeIgniter::CI_VERSION, 'yellow'));
+        CLI::write('CI Version: '. CLI::color(\CodeIgniter\CodeIgniter::CI_VERSION, 'yellow'));
         CLI::write('APPPATH: '. CLI::color(APPPATH, 'yellow'));
         CLI::write('SYSTEMPATH: '. CLI::color(SYSTEMPATH, 'yellow'));
         CLI::write('ROOTPATH: '. CLI::color(ROOTPATH, 'yellow'));
@@ -144,7 +144,7 @@ The ``BaseCommand`` class that all commands must extend have a couple of helpful
 be familiar with when creating your own commands. It also has a :doc:`Logger </general/logging>` available at
 **$this->logger**.
 
-.. php:class:: CodeIgniter\CLI\BaseCommand
+.. php:class:: CodeIgniter\\CLI\\BaseCommand
 
     .. php:method:: call(string $command[, array $params=[] ])
 
@@ -177,8 +177,8 @@ be familiar with when creating your own commands. It also has a :doc:`Logger </g
 
     .. php:method:: getPad($array, $pad)
 
-        :param Exception $array: The  $key => $value array.
-        :param Exception $pad: The pad spaces.
+        :param array    $array: The  $key => $value array.
+        :param integer  $pad: The pad spaces.
 
         A method to calculate padding for $key => $value array output. The padding can be used to output a will formatted table in CLI::
 

@@ -1,4 +1,4 @@
-<?php namespace CodeIgniter;
+<?php
 
 /**
  * CodeIgniter
@@ -8,6 +8,7 @@
  * This content is released under the MIT License (MIT)
  *
  * Copyright (c) 2014-2019 British Columbia Institute of Technology
+ * Copyright (c) 2019-2020 CodeIgniter Foundation
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -29,18 +30,20 @@
  *
  * @package    CodeIgniter
  * @author     CodeIgniter Dev Team
- * @copyright  2014-2019 British Columbia Institute of Technology (https://bcit.ca/)
+ * @copyright  2019-2020 CodeIgniter Foundation
  * @license    https://opensource.org/licenses/MIT	MIT License
  * @link       https://codeigniter.com
- * @since      Version 3.0.0
+ * @since      Version 4.0.0
  * @filesource
  */
 
-use CodeIgniter\Config\Services;
+namespace CodeIgniter;
+
 use CodeIgniter\HTTP\RequestInterface;
 use CodeIgniter\HTTP\ResponseInterface;
-use CodeIgniter\Validation\Validation;
 use CodeIgniter\Validation\Exceptions\ValidationException;
+use CodeIgniter\Validation\Validation;
+use Config\Services;
 use Psr\Log\LoggerInterface;
 
 /**
@@ -114,7 +117,6 @@ class Controller
 		$this->request  = $request;
 		$this->response = $response;
 		$this->logger   = $logger;
-		$this->logger->info('Controller "' . get_class($this) . '" loaded.');
 
 		if ($this->forceHTTPS > 0)
 		{
@@ -138,7 +140,7 @@ class Controller
 	 *
 	 * @throws \CodeIgniter\HTTP\Exceptions\HTTPException
 	 */
-	public function forceHTTPS(int $duration = 31536000)
+	protected function forceHTTPS(int $duration = 31536000)
 	{
 		force_https($duration, $this->request, $this->response);
 	}
@@ -151,7 +153,7 @@ class Controller
 	 *
 	 * @param integer $time
 	 */
-	public function cachePage(int $time)
+	protected function cachePage(int $time)
 	{
 		CodeIgniter::cache($time);
 	}
@@ -185,14 +187,14 @@ class Controller
 	 *
 	 * @return boolean
 	 */
-	public function validate($rules, array $messages = []): bool
+	protected function validate($rules, array $messages = []): bool
 	{
 		$this->validator = Services::validation();
 
 		// If you replace the $rules array with the name of the group
 		if (is_string($rules))
 		{
-			$validation = new \Config\Validation();
+			$validation = config('Validation');
 
 			// If the rule wasn't found in the \Config\Validation, we
 			// should throw an exception so the developer can find it.
@@ -211,12 +213,10 @@ class Controller
 			$rules = $validation->$rules;
 		}
 
-		$success = $this->validator
+		return $this->validator
 			->withRequest($this->request)
 			->setRules($rules, $messages)
 			->run();
-
-		return $success;
 	}
 
 	//--------------------------------------------------------------------

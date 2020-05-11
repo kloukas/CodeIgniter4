@@ -1,7 +1,7 @@
 <?php namespace CodeIgniter\Database\Live\SQLite;
 
-use CodeIgniter\Test\CIDatabaseTestCase;
 use CodeIgniter\Database\SQLite3\Table;
+use CodeIgniter\Test\CIDatabaseTestCase;
 use Config\Database;
 
 /**
@@ -26,7 +26,7 @@ class AlterTableTest extends CIDatabaseTestCase
 	 */
 	protected $forge;
 
-	public function setUp()
+	public function setUp(): void
 	{
 		parent::setUp();
 
@@ -40,19 +40,19 @@ class AlterTableTest extends CIDatabaseTestCase
 		$this->table = new Table($this->db, $this->forge);
 	}
 
-	public function tearDown()
+	public function tearDown(): void
 	{
 		parent::tearDown();
 
 		$this->forge->dropTable('foo', true);
+		$this->forge->dropTable('foo_fk', true);
 	}
 
-	/**
-	 * @expectedException        \CodeIgniter\Database\Exceptions\DataException
-	 * @expectedExceptionMessage Table `foo` was not found in the current database.
-	 */
 	public function testFromTableThrowsOnNoTable()
 	{
+		$this->expectException('CodeIgniter\Database\Exceptions\DataException');
+		$this->expectExceptionMessage('Table `foo` was not found in the current database.');
+
 		$this->table->fromTable('foo');
 	}
 
@@ -66,7 +66,7 @@ class AlterTableTest extends CIDatabaseTestCase
 
 		$fields = $this->getPrivateProperty($this->table, 'fields');
 
-		$this->assertCount(3, $fields);
+		$this->assertCount(4, $fields);
 		$this->assertTrue(array_key_exists('id', $fields));
 		$this->assertNull($fields['id']['default']);
 		$this->assertTrue($fields['id']['nullable']);
@@ -156,14 +156,38 @@ class AlterTableTest extends CIDatabaseTestCase
 		$this->assertTrue($this->db->fieldExists('serial', 'janky'));
 	}
 
+	public function testDropForeignKeySuccess()
+	{
+		$this->createTable('aliens');
+
+		$keys = $this->db->getForeignKeyData('aliens');
+		$this->assertEquals('key_id to aliens_fk.id', $keys[0]->constraint_name);
+
+		$result = $this->table
+			->fromTable('aliens')
+			->dropForeignKey('key_id')
+			->run();
+
+		$this->assertTrue($result);
+
+		$keys = $this->db->getForeignKeyData('aliens');
+		$this->assertTrue(empty($keys));
+	}
+
 	public function testProcessCopiesOldData()
 	{
 		$this->createTable('foo');
 
+		$this->db->table('foo_fk')->insert([
+			'id'   => 1,
+			'name' => 'bar',
+		]);
+
 		$this->db->table('foo')->insert([
-			'id'    => 1,
-			'name'  => 'George Clinton',
-			'email' => 'funkalicious@example.com',
+			'id'     => 1,
+			'name'   => 'George Clinton',
+			'email'  => 'funkalicious@example.com',
+			'key_id' => 1,
 		]);
 
 		$this->seeInDatabase('foo', ['name' => 'George Clinton']);
@@ -179,27 +203,50 @@ class AlterTableTest extends CIDatabaseTestCase
 
 	protected function createTable(string $tableName = 'foo')
 	{
+		// Create support table for foreign keys
 		$this->forge->addField([
-			'id'    => [
+			'id'   => [
 				'type'           => 'integer',
 				'constraint'     => 11,
 				'unsigned'       => true,
 				'auto_increment' => true,
 			],
-			'name'  => [
+			'name' => [
 				'type'       => 'varchar',
 				'constraint' => 255,
 				'null'       => false,
 			],
-			'email' => [
+		]);
+		$this->forge->createTable($tableName . '_fk');
+
+		// Create main table
+		$this->forge->addField([
+			'id'     => [
+				'type'           => 'integer',
+				'constraint'     => 11,
+				'unsigned'       => true,
+				'auto_increment' => true,
+			],
+			'name'   => [
+				'type'       => 'varchar',
+				'constraint' => 255,
+				'null'       => false,
+			],
+			'email'  => [
 				'type'       => 'varchar',
 				'constraint' => 255,
 				'null'       => true,
+			],
+			'key_id' => [
+				'type'       => 'integer',
+				'constraint' => 11,
+				'unsigned'   => true,
 			],
 		]);
 		$this->forge->addPrimaryKey('id');
 		$this->forge->addKey('name');
 		$this->forge->addUniqueKey('email');
+		$this->forge->addForeignKey('key_id', $tableName . '_fk', 'id');
 		$this->forge->createTable($tableName);
 	}
 }

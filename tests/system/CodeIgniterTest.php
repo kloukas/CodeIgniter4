@@ -1,14 +1,14 @@
 <?php namespace CodeIgniter;
 
-use Config\App;
-use Tests\Support\MockCodeIgniter;
-use CodeIgniter\Router\RouteCollection;
 use \CodeIgniter\Config\Services;
+use CodeIgniter\Router\RouteCollection;
+use CodeIgniter\Test\Mock\MockCodeIgniter;
+use Config\App;
 
 /**
  * @backupGlobals enabled
  */
-class CodeIgniterTest extends \CIUnitTestCase
+class CodeIgniterTest extends \CodeIgniter\Test\CIUnitTestCase
 {
 	/**
 	 * @var \CodeIgniter\CodeIgniter
@@ -19,7 +19,7 @@ class CodeIgniterTest extends \CIUnitTestCase
 
 	//--------------------------------------------------------------------
 
-	protected function setUp()
+	protected function setUp(): void
 	{
 		parent::setUp();
 
@@ -31,7 +31,7 @@ class CodeIgniterTest extends \CIUnitTestCase
 		$this->codeigniter = new MockCodeIgniter($config);
 	}
 
-	public function tearDown()
+	public function tearDown(): void
 	{
 		parent::tearDown();
 
@@ -55,7 +55,7 @@ class CodeIgniterTest extends \CIUnitTestCase
 		$this->codeigniter->useSafeOutput(true)->run();
 		$output = ob_get_clean();
 
-		$this->assertContains('<h1>Welcome to CodeIgniter</h1>', $output);
+		$this->assertStringContainsString('Welcome to CodeIgniter', $output);
 	}
 
 	//--------------------------------------------------------------------
@@ -71,7 +71,7 @@ class CodeIgniterTest extends \CIUnitTestCase
 		$this->codeigniter->useSafeOutput(true)->run();
 		$output = ob_get_clean();
 
-		$this->assertContains('<h1>Welcome to CodeIgniter</h1>', $output);
+		$this->assertStringContainsString('Welcome to CodeIgniter', $output);
 	}
 
 	//--------------------------------------------------------------------
@@ -90,14 +90,14 @@ class CodeIgniterTest extends \CIUnitTestCase
 		$routes->add('pages/(:segment)', function ($segment) {
 			echo 'You want to see "' . esc($segment) . '" page.';
 		});
-		$router = Services::router($routes);
+		$router = Services::router($routes, Services::request());
 		Services::injectMock('router', $router);
 
 		ob_start();
 		$this->codeigniter->useSafeOutput(true)->run();
 		$output = ob_get_clean();
 
-		$this->assertContains('You want to see "about" page.', $output);
+		$this->assertStringContainsString('You want to see "about" page.', $output);
 	}
 
 	//--------------------------------------------------------------------
@@ -114,14 +114,14 @@ class CodeIgniterTest extends \CIUnitTestCase
 		$routes = Services::routes();
 		$routes->setAutoRoute(false);
 		$routes->set404Override('Home::index');
-		$router = Services::router($routes);
+		$router = Services::router($routes, Services::request());
 		Services::injectMock('router', $router);
 
 		ob_start();
 		$this->codeigniter->useSafeOutput(true)->run();
 		$output = ob_get_clean();
 
-		$this->assertContains('<h1>Welcome to CodeIgniter</h1>', $output);
+		$this->assertStringContainsString('Welcome to CodeIgniter', $output);
 	}
 
 	//--------------------------------------------------------------------
@@ -140,14 +140,14 @@ class CodeIgniterTest extends \CIUnitTestCase
 		$routes->set404Override(function () {
 			echo '404 Override by Closure.';
 		});
-		$router = Services::router($routes);
+		$router = Services::router($routes, Services::request());
 		Services::injectMock('router', $router);
 
 		ob_start();
 		$this->codeigniter->useSafeOutput(true)->run($routes);
 		$output = ob_get_clean();
 
-		$this->assertContains('404 Override by Closure.', $output);
+		$this->assertStringContainsString('404 Override by Closure.', $output);
 	}
 
 	//--------------------------------------------------------------------
@@ -166,14 +166,14 @@ class CodeIgniterTest extends \CIUnitTestCase
 		$routes->add('pages/(:segment)', function ($segment) {
 			return 'You want to see "' . esc($segment) . '" page.';
 		});
-		$router = Services::router($routes);
+		$router = Services::router($routes, Services::request());
 		Services::injectMock('router', $router);
 
 		ob_start();
 		$this->codeigniter->useSafeOutput(true)->run();
 		$output = ob_get_clean();
 
-		$this->assertContains('You want to see "about" page.', $output);
+		$this->assertStringContainsString('You want to see "about" page.', $output);
 	}
 
 	//--------------------------------------------------------------------
@@ -194,14 +194,14 @@ class CodeIgniterTest extends \CIUnitTestCase
 			$string   = "You want to see 'about' page.";
 			return $response->setBody($string);
 		});
-		$router = Services::router($routes);
+		$router = Services::router($routes, Services::request());
 		Services::injectMock('router', $router);
 
 		ob_start();
 		$this->codeigniter->useSafeOutput(true)->run();
 		$output = ob_get_clean();
 
-		$this->assertContains("You want to see 'about' page.", $output);
+		$this->assertStringContainsString("You want to see 'about' page.", $output);
 	}
 
 	//--------------------------------------------------------------------
@@ -230,14 +230,14 @@ class CodeIgniterTest extends \CIUnitTestCase
 		$_SERVER['argc'] = 2;
 
 		// Inject mock router.
-		$router = Services::router(null, false);
+		$router = Services::router(null, Services::request(), false);
 		Services::injectMock('router', $router);
 
 		ob_start();
 		$this->codeigniter->useSafeOutput(true)->run();
 		$output = ob_get_clean();
 
-		$this->assertContains('<h1>Welcome to CodeIgniter</h1>', $output);
+		$this->assertStringContainsString('Welcome to CodeIgniter', $output);
 	}
 
 	public function testTransfersCorrectHTTPVersion()
@@ -271,6 +271,33 @@ class CodeIgniterTest extends \CIUnitTestCase
 		$this->codeigniter->useSafeOutput(true)->run();
 		$output = ob_get_clean();
 
-		$this->assertContains('<h1>Welcome to CodeIgniter</h1>', $output);
+		$this->assertStringContainsString('Welcome to CodeIgniter', $output);
+	}
+
+	//--------------------------------------------------------------------
+
+	public function testRunForceSecure()
+	{
+		$_SERVER['argv'] = [
+			'index.php',
+			'/',
+		];
+		$_SERVER['argc'] = 2;
+
+		$config                            = new App();
+		$config->forceGlobalSecureRequests = true;
+		$codeigniter                       = new MockCodeIgniter($config);
+
+		$this->getPrivateMethodInvoker($codeigniter, 'getRequestObject')();
+		$this->getPrivateMethodInvoker($codeigniter, 'getResponseObject')();
+
+		$response = $this->getPrivateProperty($codeigniter, 'response');
+		$this->assertNull($response->getHeader('Location'));
+
+		ob_start();
+		$codeigniter->useSafeOutput(true)->run();
+		$output = ob_get_clean();
+
+		$this->assertEquals('https://example.com', $response->getHeader('Location')->getValue());
 	}
 }
